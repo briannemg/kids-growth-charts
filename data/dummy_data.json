@@ -1,0 +1,90 @@
+{
+  "_note": "This is sample data only. See README for instructions on creating your own data file.",
+  "family": {
+    "father_height_cm": 180.3,
+    "mother_height_cm": 165.1
+  },
+  "children": [
+    {
+      "name": "Alex",
+      "sex": "M",
+      "dob": "2018-03-15",
+      "measurements": [
+        {
+          "date": "2018-03-15",
+          "height_cm": 50.5,
+          "weight_kg": 3.4,
+          "head_circumference_cm": 34.5
+        },
+        {
+          "date": "2018-06-15",
+          "height_cm": 62.0,
+          "weight_kg": 6.2,
+          "head_circumference_cm": 41.0
+        },
+        {
+          "date": "2018-09-15",
+          "height_cm": 68.5,
+          "weight_kg": 8.1,
+          "head_circumference_cm": 43.5
+        },
+        {
+          "date": "2019-03-15",
+          "height_cm": 75.0,
+          "weight_kg": 9.8,
+          "head_circumference_cm": 46.0
+        },
+        {
+          "date": "2019-09-15",
+          "height_cm": 80.5,
+          "weight_kg": 11.2,
+          "head_circumference_cm": 47.5
+        },
+        { "date": "2020-03-15", "height_cm": 88.0, "weight_kg": 13.2 },
+        { "date": "2021-03-15", "height_cm": 96.5, "weight_kg": 15.1 },
+        { "date": "2022-03-15", "height_cm": 104.0, "weight_kg": 18.5 },
+        { "date": "2023-03-15", "height_cm": 111.5, "weight_kg": 21.0 },
+        { "date": "2024-03-15", "height_cm": 118.0, "weight_kg": 23.0 }
+      ]
+    },
+    {
+      "name": "Jamie",
+      "sex": "F",
+      "dob": "2021-07-20",
+      "measurements": [
+        {
+          "date": "2021-07-20",
+          "height_cm": 49.0,
+          "weight_kg": 3.2,
+          "head_circumference_cm": 33.5
+        },
+        {
+          "date": "2021-10-20",
+          "height_cm": 60.5,
+          "weight_kg": 5.8,
+          "head_circumference_cm": 40.0
+        },
+        {
+          "date": "2022-01-20",
+          "height_cm": 65.0,
+          "weight_kg": 7.0,
+          "head_circumference_cm": 42.0
+        },
+        {
+          "date": "2022-07-20",
+          "height_cm": 74.0,
+          "weight_kg": 9.2,
+          "head_circumference_cm": 45.0
+        },
+        {
+          "date": "2023-01-20",
+          "height_cm": 79.5,
+          "weight_kg": 10.8,
+          "head_circumference_cm": 46.5
+        },
+        { "date": "2023-07-20", "height_cm": 86.0, "weight_kg": 12.0 },
+        { "date": "2024-07-20", "height_cm": 97.0, "weight_kg": 15.5 }
+      ]
+    }
+  ]
+}

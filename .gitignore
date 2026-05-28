@@ -1,0 +1,36 @@
+# Virtual environment
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Downloaded data files (reproduced by download_data.py)
+growth_charts/data/*.csv
+growth_charts/data/*.xls
+growth_charts/data/*.xlsx
+
+# Downloaded font files (reproduced by scripts/download_fonts.py)
+growth_charts/fonts/*.ttf
+growth_charts/fonts/*.otf
+
+# Generated output
+output/
+
+# Loose output files in project root (just in case)
+*.png
+*.pdf
+
+# Family growth data - real data is private, only dummy data is tracked
+data/my_family.json
+
+# VSCode
+.vscode/
+
+# macOS
+.DS_Store
+Thumbs.db
