@@ -22,8 +22,8 @@ growth_charts/fonts/*.otf
 output/
 
 # Loose output files in project root (just in case)
-*.png
-*.pdf
+/*.png
+/*.pdf
 
 # Family growth data - real data is private, only dummy data is tracked
 data/my_family.json
