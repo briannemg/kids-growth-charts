@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Growth Charts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&family=Lora:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../static/style.css" />
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <span class="logo-icon">📈</span>
+        <span class="logo-text">Growth Charts</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="form-section">
+        <div class="form-header">
+          <h1>Add a Measurement</h1>
+          <p>Record a new well-visit or at-home measurement.</p>
+        </div>
+
+        <div class="card">
+          <!-- Child & Date -->
+          <div class="field-group">
+            <h2 class="group-label">Who &amp; When</h2>
+
+            <div class="field">
+              <label for="child-select">Child</label>
+              <select id="child-select">
+                <option value="" disabled selected>Select a child...</option>
+                <option value="alex">Alex</option>
+                <option value="jame">Jamie</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="measure-date">Date</label>
+              <input type="date" id="measure-date" />
+            </div>
+          </div>
+          <!-- Height -->
+          <div class="field-group">
+            <h2 class="group-label">Height</h2>
+
+            <div class="unit-toggle" id="height-toggle">
+              <button class="unit-btn active" data-unit="ft_in">ft / in</button>
+              <button class="unit-btn" data-unit="dec_in">decimal in</button>
+              <button class="unit-btn" data-unit="cm">cm</button>
+            </div>
+
+            <!-- ft + in -->
+            <div class="field-row" id="height-ft-in">
+              <div class="field">
+                <label for="height-ft">Feet</label>
+                <input
+                  type="number"
+                  id="height-ft"
+                  min="0"
+                  max="8"
+                  placeholder="3"
+                />
+              </div>
+              <div class="field">
+                <label for="height-in">Inches</label>
+                <input
+                  type="number"
+                  id="height-in"
+                  min="0"
+                  max="11.9"
+                  step="0.1"
+                  placeholder="6.5"
+                />
+              </div>
+            </div>
+
+            <!-- decimal inches -->
+            <div class="field hidden" id="height-dec-in">
+              <label for="height-dec">Inches</label>
+              <input
+                type="number"
+                id="height-dec"
+                min="0"
+                max="120"
+                step="0.1"
+                placeholder="42.5"
+              />
+            </div>
+
+            <!-- cm -->
+            <div class="field hidden" id="height-cm-wrap">
+              <label for="height-cm">Centimeters</label>
+              <input
+                type="number"
+                id="height-cm"
+                min="0"
+                max="250"
+                step="0.1"
+                placeholder="108.0"
+              />
+            </div>
+          </div>
+
+          <!-- Weight -->
+          <div class="field-group">
+            <h2 class="group-label">Weight</h2>
+
+            <div class="unit-toggle" id="weight-toggle">
+              <button class="unit-btn active" data-unit="lbs_oz">
+                lb / oz
+              </button>
+              <button class="unit-btn" data-unit="dec_lbs">decimal lb</button>
+              <button class="unit-btn" data-unit="kg">kg</button>
+              <button class="unit-btn" data-unit="g">g</button>
+            </div>
+
+            <!-- lbs + oz -->
+            <div class="field-row" id="weight-lbs-oz">
+              <div class="field">
+                <label for="weight-lbs">Pounds</label>
+                <input
+                  type="number"
+                  id="weight-lbs"
+                  min="0"
+                  max="400"
+                  placeholder="45"
+                />
+              </div>
+              <div class="field">
+                <label for="weight-oz">Ounces</label>
+                <input
+                  type="number"
+                  id="weight-oz"
+                  min="0"
+                  max="15.9"
+                  step="0.1"
+                  placeholder="8"
+                />
+              </div>
+            </div>
+
+            <!-- decimal lbs -->
+            <div class="field hidden" id="weight-dec-lbs-wrap">
+              <label for="weight-dec-lbs">Pounds</label>
+              <input
+                type="number"
+                id="weight-dec-lbs"
+                min="0"
+                max="400"
+                step="0.1"
+                placeholder="45.5"
+              />
+            </div>
+
+            <!-- kg -->
+            <div class="field hidden" id="weight-kg-wrap">
+              <label for="weight-kg">Kilograms</label>
+              <input
+                type="number"
+                id="weight-kg"
+                min="0"
+                max="200"
+                step="0.1"
+                placeholder="20.6"
+              />
+            </div>
+
+            <!-- g -->
+            <div class="field hidden" id="weight-g-wrap">
+              <label for="weight-g">Grams</label>
+              <input
+                type="number"
+                id="weight-g"
+                min="0"
+                max="200000"
+                step="1"
+                placeholder="20600"
+              />
+            </div>
+          </div>
+
+          <!-- Head Circumference -->
+          <div class="field-group">
+            <h2 class="group-label">
+              Head Circumference<span class="optional-tag">optional</span>
+            </h2>
+            <p class="group-note">
+              Typically recorded for children under 3 years old.
+            </p>
+
+            <div class="unit-toggle" id="hc-toggle">
+              <button class="unit-btn active" data-unit="dec_in">
+                decimal in
+              </button>
+              <button class="unit-btn" data-unit="cm">cm</button>
+            </div>
+
+            <!-- decimal in -->
+            <div class="field" id="hc-dec-in">
+              <label for="hc-in">Inches</label>
+              <input
+                type="number"
+                id="hc-in"
+                min="0"
+                max="30"
+                step="0.1"
+                placeholder="18.5"
+              />
+            </div>
+
+            <!-- cm -->
+            <div class="field hidden" id="hc-cm-wrap">
+              <label for="hc-cm">Centimeters</label>
+              <input
+                type="number"
+                id="hc-cm"
+                min="0"
+                max="75"
+                step="0.1"
+                placeholder="47.0"
+              />
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <div class="form-actions">
+            <button class="btn-primary" id="submit-btn" type="button">
+              Save Measurement
+            </button>
+          </div>
+
+          <!-- Result area (hidden until JS populates it) -->
+          <div id="result" class="result hidden"></div>
+        </div>
+        <!-- .card -->
+      </section>
+    </main>
+
+    <script src="../static/app.js"></script>
+  </body>
+</html>
