@@ -330,6 +330,29 @@ select {
   margin-left: 8px;
 }
 
+/* ── Charts ────────────────────────────────────────────────────────── */
+#charts-section {
+  margin-top: 32px;
+}
+
+.chart-wrapper {
+  margin-bottom: 28px;
+}
+
+.chart-label {
+  font-family: "Lora", Georgia, serif;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+
+.chart-img {
+  width: 100%;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--lavender-border);
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   main {

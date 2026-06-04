@@ -241,6 +241,51 @@ function showLoading() {
   result.innerHTML = "<div class='result-title'>Calculating…</div>";
 }
 
+function showCharts(child, heightCm, weightKg, hcCm) {
+  // Remove any existing charts
+  var existing = document.getElementById("charts-section");
+  if (existing) existing.remove();
+
+  var section = document.createElement("div");
+  section.id = "charts-section";
+
+  // Decide which charts to show based on what was submitted
+  var charts = [];
+  if (heightCm) charts.push({ type: "height", label: "Height-for-Age" });
+  if (weightKg) charts.push({ type: "weight", label: "Weight-for-Age" });
+  if (hcCm)
+    charts.push({
+      type: "head_circumference",
+      label: "Head Circumference-for-Age",
+    });
+  if (heightCm && weightKg) charts.push({ type: "bmi", label: "BMI-for-Age" });
+  if (heightCm)
+    charts.push({ type: "projection", label: "Projected Adult Height" });
+
+  charts.forEach(function (chart) {
+    var wrapper = document.createElement("div");
+    wrapper.className = "chart-wrapper";
+
+    var label = document.createElement("h3");
+    label.className = "chart-label";
+    label.textContent = chart.label;
+
+    // The src points directly to the Flask chart endpoint
+    var img = document.createElement("img");
+    img.className = "chart-img";
+    img.alt = chart.label;
+    img.src = `/charts/${encodeURIComponent(child)}/${chart.type}`;
+
+    wrapper.appendChild(label);
+    wrapper.appendChild(img);
+    section.appendChild(wrapper);
+  });
+
+  // Insert charts after the card
+  var card = document.querySelector(".card");
+  card.insertAdjacentElement("afterend", section);
+}
+
 function showResults(data) {
   var result = document.getElementById("result");
   result.className = "result success";
@@ -268,6 +313,9 @@ function showResults(data) {
       data.bmi ? data.bmi.toFixed(1) : "—",
       data.percentiles.bmi,
     );
+
+  // Show charts below the results
+  showCharts(data.child, data.height_cm, data.weight_kg, data.hc_cm);
 }
 
 // ── 7. SUBMIT HANDLER ────────────────────────────────────────────────────

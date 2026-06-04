@@ -1,18 +1,25 @@
 """
 app.py
 
-Stage 2 Flask backend for the growth charts web app.
+Flask backend for the growth charts web app.
 
 Endpoints:
     GET  /            - serves index.html
     GET  /children    - returns the ist of children from the data file
     POST /calculate   - accepts a measurement, returns percentiles
+    GET  /charts/<child_name>/<chart_type> - renders and returns a growth chart as PNG
 """
 
+import io
 import json
 import sys
 from datetime import datetime
 from pathlib import Path
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from flask import Flask, jsonify, render_template, request, send_file  # type: ignore # noqa: E402
 
 # ── Path setup ────────────────────────────────────────────────────────────────
 # app.py lives in web/, but growth_charts/ is one level up in the project root.
@@ -21,8 +28,14 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from flask import Flask, jsonify, render_template, request  # noqa: E402
+from growth_charts.models import Child, Measurement  # noqa: E402
 from growth_charts.percentiles import get_percentile, load_all_tables  # noqa: E402
+from growth_charts.plotting import (  # noqa: E402
+    plot_bmi_chart,
+    plot_growth_chart,
+    plot_head_circumference_chart,
+    plot_projection_over_time,
+)
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
@@ -61,6 +74,29 @@ def age_months_at(dob_str: str, measurement_date_str: str) -> float:
     mdate = datetime.strptime(measurement_date_str, "%Y-%m-%d").date()
     delta_days = (mdate - dob).days
     return round(delta_days / 30.4375, 1)
+
+def build_child_object(child_data: dict) -> Child:
+    """
+    Build a Child model object from raw JSON data.
+    
+    Used by the chart endpoint to reconstruct the full Child object
+    including all historical measurements.
+    """
+    return Child(
+        name=child_data["name"],
+        sex=child_data["sex"],
+        dob=datetime.strptime(child_data["dob"], "%Y-%m-%d").date(),
+        measurements=[
+            Measurement(
+                date=datetime.strptime(m["date"], "%Y-%m-%d").date(),
+                age_months=age_months_at(child_data["dob"], m["date"]),
+                height_cm=m.get("height_cm"),
+                weight_kg=m.get("weight_kg"),
+                head_circumference_cm=m.get("head_circumference"),
+            )
+            for m in child_data["measurements"]
+        ],
+    )
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -175,6 +211,62 @@ def calculate():
         "bmi":        bmi,
         "percentiles": percentiles,
     })
+    
+
+@app.route("/charts/<child_name>/<chart_type>")
+def chart(child_name, chart_type):
+    """
+    Render and return a growth chart as a PNG image.
+    
+    URL examples:
+        /charts/Alex/height
+        /charts/Alex/weight
+        /charts/Alex/head_circumference
+        /charts/Alex/bmi
+        /charts/Alex/projection
+        
+    Returns a PNG image directly - use as the src of an <img> tag.
+    Returns a JSON error if the child is not found or the chart type
+    is not available (e.g. requesting BMI for a child with no height
+    or weight data).
+    """
+    child_data = find_child(child_name)
+    if child_data is None:
+        return jsonify({"error": f"Child '{child_name}' not found"}), 404
+    
+    child = build_child_object(child_data)
+    
+    # Load family heights for the projection chart
+    with open(DATA_FILE) as f:
+        family_data = json.load(f).get("family", {})
+    father_cm = family_data.get("father_height_cm")
+    mother_cm = family_data.get("mother_height_cm")
+    
+    # Generate the right chart
+    try:
+        if chart_type == "height":
+            fig = plot_growth_chart(child, "height", TABLES)
+        elif chart_type == "weight":
+            fig = plot_growth_chart(child, "weight", TABLES)
+        elif chart_type == "head_circumference":
+            fig = plot_head_circumference_chart(child, TABLES)
+        elif chart_type == "bmi":
+            fig = plot_bmi_chart(child, TABLES)
+        elif chart_type == "projection":
+            fig = plot_projection_over_time(child, TABLES, father_cm, mother_cm)
+        else:
+            return jsonify({"error": f"Unknown chart type '{chart_type}'"}), 400
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    
+    # Render the figure to memory and return it as a PNG.
+    # We never write to disk - the image goes straight from matplotlib
+    # into the HTTP response via an in-memory buffer.
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png")
     
     
 # ── Run ───────────────────────────────────────────────────────────────────────
