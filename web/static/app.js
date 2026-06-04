@@ -1,28 +1,14 @@
 // ── app.js ────────────────────────────────────────────────────────────────
 //
-// Stage 1: Pure JS form behavior.
-// No backend yet - this just reads the form, validates it,
-// and displays a summary of what was entered.
+// Stage 2: Frontend wired to the Flask backend.
 //
-// JS concepts practiced here:
-//   - querySelector / getElementById  (selecting elements)
-//   - addEventListener                (responding to clicks)
-//   - classList.add/remove            (showing/hiding elements)
-//   - value / parseFloat              (reading input values)
-//   - template literals               (building strings with ${ })
-//   - basic validation                (checking for empty/invalid inputs)
-//   - dataset                         (reading data-* attributes from HTML)
+// New JS concepts introduced here:
+//   - fetch()              (making HTTP requests to the backend)
+//   - async / await        (handling asynchronous operations cleanly)
+//   - response.json()      (parsing JSON responses)
+//   - populating a <select> dynamically from data
 
 // ── 1. UNIT TOGGLES ──────────────────────────────────────────────────────
-//
-// Each section has a set of unit buttons and a matching set up input panels.
-// When a button is clicked:
-//   - Mark it active (for CSS styling)
-//   - Show the matching input panel
-//   - Hide all the others
-//
-// panelMap is an object that maps each data-unit value to an element ID.
-// This replaces a long chain of if/else checks.
 
 function setupUnitToggle(toggleId, panelMap) {
   var toggle = document.getElementById(toggleId);
@@ -30,14 +16,10 @@ function setupUnitToggle(toggleId, panelMap) {
 
   buttons.forEach(function (btn) {
     btn.addEventListener("click", function () {
-      // Deactivate all buttons
       buttons.forEach(function (b) {
         b.classList.remove("active");
       });
-      // Activate the clicked one
       btn.classList.add("active");
-
-      // Hide all panels, then show the one that matches this button
       Object.values(panelMap).forEach(function (panelId) {
         document.getElementById(panelId).classList.add("hidden");
       });
@@ -57,8 +39,6 @@ function setupUnitToggle(toggleId, panelMap) {
     .classList.remove("hidden");
 }
 
-// Wire up all three toggles.
-// The panelMap keys must match the data-unit values in the HTML exactly.
 setupUnitToggle("height-toggle", {
   ft_in: "height-ft-in",
   dec_in: "height-dec-in",
@@ -77,10 +57,34 @@ setupUnitToggle("hc-toggle", {
   cm: "hc-cm-wrap",
 });
 
-// ── 2. UNIT CONVERSION HELPERS ───────────────────────────────────────────
+// ── 2. POPULATE CHILDREN DROPDOWN ────────────────────────────────────────
 //
-// Your Python codes stores everything in metric (cm, kg).
-// These match the conversion functions in growth_charts/units.py.
+// Instead of hardcoding names in the HTML, we fetch them from the backend.
+// This is an async function — the `await` keyword pauses it until the
+// fetch completes, then continues. Everything else on the page keeps
+// working while it waits.
+
+async function loadChildren() {
+  try {
+    var response = await fetch("/children");
+    var data = await response.json();
+
+    var select = document.getElementById("child-select");
+
+    data.children.forEach(function (child) {
+      var option = document.createElement("option");
+      option.value = child.name;
+      option.textContent = child.name;
+      select.appendChild(option);
+    });
+  } catch (err) {
+    console.error("Could not load children:", err);
+  }
+}
+
+loadChildren();
+
+// ── 3. UNIT CONVERSION HELPERS ───────────────────────────────────────────
 
 function feetInchesToCm(feet, inches) {
   return (feet * 12 + inches) * 2.54;
@@ -102,11 +106,7 @@ function gramsToKg(g) {
   return g / 1000;
 }
 
-// ── 3. READING FORM VALUES ───────────────────────────────────────────────
-//
-// Each function finds the currently active unit panel and reads
-// the right input(s) from it, returning a value in metric.
-// Returns null if the field is empty.
+// ── 4. READING FORM VALUES ───────────────────────────────────────────────
 
 function getActiveUnit(toggleId) {
   var activeBtn = document.querySelector("#" + toggleId + " .unit-btn.active");
@@ -115,7 +115,6 @@ function getActiveUnit(toggleId) {
 
 function getHeightCm() {
   var unit = getActiveUnit("height-toggle");
-
   if (unit === "ft_in") {
     var ft = parseFloat(document.getElementById("height-ft").value) || 0;
     var inches = parseFloat(document.getElementById("height-in").value) || 0;
@@ -135,7 +134,6 @@ function getHeightCm() {
 
 function getWeightKg() {
   var unit = getActiveUnit("weight-toggle");
-
   if (unit === "lbs_oz") {
     var lbs = parseFloat(document.getElementById("weight-lbs").value) || 0;
     var oz = parseFloat(document.getElementById("weight-oz").value) || 0;
@@ -144,7 +142,7 @@ function getWeightKg() {
   }
   if (unit === "dec_lbs") {
     var dec = parseFloat(document.getElementById("weight-dec-lbs").value);
-    return isNaN(dec) ? Null : decimalLbsToKg(dec);
+    return isNaN(dec) ? null : decimalLbsToKg(dec);
   }
   if (unit === "kg") {
     var kg = parseFloat(document.getElementById("weight-kg").value);
@@ -159,7 +157,6 @@ function getWeightKg() {
 
 function getHcCm() {
   var unit = getActiveUnit("hc-toggle");
-
   if (unit === "dec_in") {
     var inches = parseFloat(document.getElementById("hc-in").value);
     return isNaN(inches) ? null : inchesToCm(inches);
@@ -171,48 +168,36 @@ function getHcCm() {
   return null;
 }
 
-// ── 4. VALIDATION ────────────────────────────────────────────────────────
-//
-// Returns an array of error message strings.
-// An empty array means everything is valid.
+// ── 5. VALIDATION ────────────────────────────────────────────────────────
 
 function validate(child, date, heightCm, weightKg) {
   var errors = [];
-
-  if (!child) {
-    errors.push("Please select a child.");
-  }
-  if (!date) {
-    errors.push("Please enter a measurement date.");
-  }
+  if (!child) errors.push("Please select a child.");
+  if (!date) errors.push("Please enter a measurement date.");
   if (heightCm === null && weightKg === null) {
     errors.push("Please enter at least a height or weight.");
   }
   if (heightCm !== null && (heightCm < 30 || heightCm > 250)) {
-    errors.push("Height looks out of range - double-check the value.");
+    errors.push("Height looks out of range — double-check the value.");
   }
   if (weightKg !== null && (weightKg < 0.5 || weightKg > 200)) {
-    errors.push("Weight looks out of range - double-check the value.");
+    errors.push("Weight looks out of range — double-check the value.");
   }
-
   return errors;
 }
 
-// ── 5. DISPLAYING RESULTS ────────────────────────────────────────────────
-//
-// Build a friendly summary of the collected values and show it below the form.
-// Both imperial and metric are shown so the user can sanity-check the conversion.
+// ── 6. DISPLAYING RESULTS ────────────────────────────────────────────────
 
 function formatHeight(cm) {
-  if (cm === null) return "-";
+  if (!cm) return "—";
   var totalInches = cm / 2.54;
   var ft = Math.floor(totalInches / 12);
   var inches = (totalInches % 12).toFixed(1);
-  return `${ft} ft ${inches} in  (${cm.toFixed(1)} cm)`;
+  return `${ft}′ ${inches}″  (${cm.toFixed(1)} cm)`;
 }
 
 function formatWeight(kg) {
-  if (kg === null) return "-";
+  if (!kg) return "—";
   var totalOz = kg / 0.0283495;
   var lbs = Math.floor(totalOz / 16);
   var oz = (totalOz % 16).toFixed(1);
@@ -220,16 +205,25 @@ function formatWeight(kg) {
 }
 
 function formatHc(cm) {
-  if (cm === null) return "-";
-  return `${(cm / 2.54).toFixed(1)} in  (${cm.toFixed(1)} cm)`;
+  if (!cm) return "—";
+  return `${(cm / 2.54).toFixed(1)}″  (${cm.toFixed(1)} cm)`;
 }
 
-function resultRow(label, value) {
+function formatPercentile(p) {
+  if (p === null || p === undefined) return "—";
+  return `${p}th percentile`;
+}
+
+function resultRow(label, value, percentile) {
+  var percentileHtml =
+    percentile !== undefined
+      ? `<span class="result-percentile">${formatPercentile(percentile)}</span>`
+      : "";
   return `
-      <div class="result-row">
-        <span class="result-label">${label}</span>
-        <span class="result-value">${value}</span>
-      </div>`;
+    <div class="result-row">
+      <span class="result-label">${label}</span>
+      <span class="result-value">${value} ${percentileHtml}</span>
+    </div>`;
 }
 
 function showError(messageHtml) {
@@ -237,45 +231,99 @@ function showError(messageHtml) {
   result.className = "result error-box";
   result.innerHTML =
     "<div class='result-title'>⚠️ Please fix the following:</div>" +
-    messageHTML;
+    messageHtml;
 }
 
-function showSuccess(child, date, heightCm, weightKg, hcCm) {
+function showLoading() {
+  var result = document.getElementById("result");
+  result.className = "result";
+  result.classList.remove("hidden");
+  result.innerHTML = "<div class='result-title'>Calculating…</div>";
+}
+
+function showResults(data) {
   var result = document.getElementById("result");
   result.className = "result success";
+
+  var ageYears = Math.floor(data.age_months / 12);
+  var ageMonths = Math.round(data.age_months % 12);
+  var ageDisplay =
+    ageYears > 0
+      ? `${ageYears}y ${ageMonths}m (${data.age_months} months)`
+      : `${data.age_months} months`;
+
   result.innerHTML =
-    "<div class='result-title'>✓ Measurement ready to save</div>" +
-    resultRow("Child", child) +
-    resultRow("Date", date) +
-    resultRow("Height", formatHeight(heightCm)) +
-    resultRow("Weight", formatWeight(weightKg)) +
-    resultRow("Head circumference", formatHc(hcCm));
+    `<div class="result-title">✓ Results for ${data.child}</div>` +
+    resultRow("Date", data.date) +
+    resultRow("Age", ageDisplay) +
+    resultRow("Height", formatHeight(data.height_cm), data.percentiles.height) +
+    resultRow("Weight", formatWeight(data.weight_kg), data.percentiles.weight) +
+    resultRow(
+      "Head circumference",
+      formatHc(data.hc_cm),
+      data.percentiles.head_circumference,
+    ) +
+    resultRow(
+      "BMI",
+      data.bmi ? data.bmi.toFixed(1) : "—",
+      data.percentiles.bmi,
+    );
 }
 
-// ── 6. SUBMIT HANDLER ────────────────────────────────────────────────────
+// ── 7. SUBMIT HANDLER ────────────────────────────────────────────────────
 //
-// Ties everything together when the button is clicked.
+// async so it can use await for the fetch call.
+// All display functions are defined above, so they're available here.
 
-document.getElementById("submit-btn").addEventListener("click", function () {
-  var child = document.getElementById("child-select").value;
-  var date = document.getElementById("measure-date").value;
-  var heightCm = getHeightCm();
-  var weightKg = getWeightKg();
-  var hcCm = getHcCm();
+document
+  .getElementById("submit-btn")
+  .addEventListener("click", async function () {
+    var child = document.getElementById("child-select").value;
+    var date = document.getElementById("measure-date").value;
+    var heightCm = getHeightCm();
+    var weightKg = getWeightKg();
+    var hcCm = getHcCm();
 
-  var errors = validate(child, date, heightCm, weightKg);
+    var errors = validate(child, date, heightCm, weightKg);
 
-  var result = document.getElementById("result");
-  result.classList.remove("hidden");
+    var result = document.getElementById("result");
+    result.classList.remove("hidden");
 
-  if (errors.length > 0) {
-    var errorList = errors
-      .map(function (e) {
-        return "<div>• " + e + "</div>";
-      })
-      .join("");
-    showError(errorList);
-  } else {
-    showSuccess(child, date, heightCm, weightKg, hcCm);
-  }
-});
+    if (errors.length > 0) {
+      var errorList = errors
+        .map(function (e) {
+          return "<div>• " + e + "</div>";
+        })
+        .join("");
+      showError(errorList);
+      return;
+    }
+
+    showLoading();
+
+    try {
+      var response = await fetch("/calculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          child: child,
+          date: date,
+          height_cm: heightCm,
+          weight_kg: weightKg,
+          hc_cm: hcCm,
+        }),
+      });
+
+      if (!response.ok) {
+        var err = await response.json();
+        showError("<div>" + (err.error || "Something went wrong.") + "</div>");
+        return;
+      }
+
+      var data = await response.json();
+      showResults(data);
+    } catch (err) {
+      showError("<div>Could not reach the server. Is Flask running?</div>");
+      console.error(err);
+    }
+  });

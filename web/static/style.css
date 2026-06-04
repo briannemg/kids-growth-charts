@@ -320,6 +320,16 @@ select {
   font-weight: 600;
 }
 
+.result-percentile {
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--lavender-pale);
+  color: var(--lavender-dark);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  margin-left: 8px;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   main {
