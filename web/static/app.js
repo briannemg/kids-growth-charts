@@ -276,8 +276,13 @@ function showCharts(child, heightCm, weightKg, hcCm) {
     img.alt = chart.label;
     img.src = `/charts/${encodeURIComponent(child)}/${chart.type}`;
 
+    var link = document.createElement("a");
+    link.href = `/charts/${encodeURIComponent(child)}/${chart.type}`;
+    link.target = "_blank";
+    link.appendChild(img);
+
     wrapper.appendChild(label);
-    wrapper.appendChild(img);
+    wrapper.appendChild(link);
     section.appendChild(wrapper);
   });
 
