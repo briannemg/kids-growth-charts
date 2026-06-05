@@ -1,18 +1,24 @@
 // ── app.js ────────────────────────────────────────────────────────────────
 //
-// Stage 2: Frontend wired to the Flask backend.
+// Growth Charts — frontend logic
 //
-// New JS concepts introduced here:
-//   - fetch()              (making HTTP requests to the backend)
-//   - async / await        (handling asynchronous operations cleanly)
-//   - response.json()      (parsing JSON responses)
-//   - populating a <select> dynamically from data
+// JS concepts used:
+//   - fetch() / async / await     (HTTP requests to Flask backend)
+//   - DOM manipulation            (querySelector, createElement, classList)
+//   - Event listeners             (click, change)
+//   - Template literals           (${} strings)
+//   - Modules pattern             (functions grouped by responsibility)
 
-// Global state
-var childrenData = {};
-var lastResult = null;
+// ── GLOBAL STATE ─────────────────────────────────────────────────────────────
 
-// ── 1. UNIT TOGGLES ──────────────────────────────────────────────────────
+var childrenData = {}; // keyed by name, populated from /children
+var lastResult = null; // most recent /calculate response
+var formState = "idle"; // "idle" | "calculated"
+// States:
+//   idle       — form is empty or reset, button says "Calculate"
+//   calculated — /calculate succeeded, button says "Save Measurement"
+
+// ── 1. UNIT TOGGLES ──────────────────────────────────────────────────────────
 
 function setupUnitToggle(toggleId, panelMap) {
   var toggle = document.getElementById(toggleId);
@@ -24,8 +30,8 @@ function setupUnitToggle(toggleId, panelMap) {
         b.classList.remove("active");
       });
       btn.classList.add("active");
-      Object.values(panelMap).forEach(function (panelId) {
-        document.getElementById(panelId).classList.add("hidden");
+      Object.values(panelMap).forEach(function (id) {
+        document.getElementById(id).classList.add("hidden");
       });
       document
         .getElementById(panelMap[btn.dataset.unit])
@@ -33,9 +39,9 @@ function setupUnitToggle(toggleId, panelMap) {
     });
   });
 
-  // Initialize: hide all panels, then show the default active one
-  Object.values(panelMap).forEach(function (panelId) {
-    document.getElementById(panelId).classList.add("hidden");
+  // Initialize: hide all, show the active one
+  Object.values(panelMap).forEach(function (id) {
+    document.getElementById(id).classList.add("hidden");
   });
   var defaultBtn = toggle.querySelector(".unit-btn.active");
   document
@@ -43,30 +49,41 @@ function setupUnitToggle(toggleId, panelMap) {
     .classList.remove("hidden");
 }
 
+// Main form toggles
 setupUnitToggle("height-toggle", {
   ft_in: "height-ft-in",
   dec_in: "height-dec-in",
   cm: "height-cm-wrap",
 });
-
 setupUnitToggle("weight-toggle", {
   lbs_oz: "weight-lbs-oz",
   dec_lbs: "weight-dec-lbs-wrap",
   kg: "weight-kg-wrap",
   g: "weight-g-wrap",
 });
-
 setupUnitToggle("hc-toggle", {
   dec_in: "hc-dec-in",
   cm: "hc-cm-wrap",
 });
 
-// ── 2. POPULATE CHILDREN DROPDOWN ────────────────────────────────────────
-//
-// Instead of hardcoding names in the HTML, we fetch them from the backend.
-// This is an async function — the `await` keyword pauses it until the
-// fetch completes, then continues. Everything else on the page keeps
-// working while it waits.
+// Modal toggles
+setupUnitToggle("modal-height-toggle", {
+  ft_in: "modal-height-ft-in",
+  dec_in: "modal-height-dec-in",
+  cm: "modal-height-cm-wrap",
+});
+setupUnitToggle("modal-weight-toggle", {
+  lbs_oz: "modal-weight-lbs-oz",
+  dec_lbs: "modal-weight-dec-lbs-wrap",
+  kg: "modal-weight-kg-wrap",
+  g: "modal-weight-g-wrap",
+});
+setupUnitToggle("modal-hc-toggle", {
+  dec_in: "modal-hc-dec-in",
+  cm: "modal-hc-cm-wrap",
+});
+
+// ── 2. LOAD CHILDREN ─────────────────────────────────────────────────────────
 
 async function loadChildren() {
   try {
@@ -75,7 +92,7 @@ async function loadChildren() {
     var select = document.getElementById("child-select");
 
     data.children.forEach(function (child) {
-      childrenData[child.name] = child; // store the whole object
+      childrenData[child.name] = child;
       var option = document.createElement("option");
       option.value = child.name;
       option.textContent = child.name;
@@ -88,91 +105,106 @@ async function loadChildren() {
 
 loadChildren();
 
-// ── 3. UNIT CONVERSION HELPERS ───────────────────────────────────────────
+// ── 3. UNIT CONVERSION HELPERS ───────────────────────────────────────────────
 
 function feetInchesToCm(feet, inches) {
   return (feet * 12 + inches) * 2.54;
 }
-
 function inchesToCm(inches) {
   return inches * 2.54;
 }
-
 function lbsOzToKg(lbs, oz) {
   return (lbs * 16 + oz) * 0.0283495;
 }
-
 function decimalLbsToKg(lbs) {
   return lbs * 0.453592;
 }
-
 function gramsToKg(g) {
   return g / 1000;
 }
-
-// ── 4. READING FORM VALUES ───────────────────────────────────────────────
-
-function getActiveUnit(toggleId) {
-  var activeBtn = document.querySelector("#" + toggleId + " .unit-btn.active");
-  return activeBtn ? activeBtn.dataset.unit : null;
+function round1(n) {
+  return Math.round(n * 10) / 10;
 }
 
-function getHeightCm() {
-  var unit = getActiveUnit("height-toggle");
+// ── 4. READING FORM VALUES ───────────────────────────────────────────────────
+
+function getActiveUnit(toggleId) {
+  var btn = document.querySelector("#" + toggleId + " .unit-btn.active");
+  return btn ? btn.dataset.unit : null;
+}
+
+function readHeightCm(prefix) {
+  // prefix is "" for main form, "modal-" for modal
+  var unit = getActiveUnit(prefix + "height-toggle");
   if (unit === "ft_in") {
-    var ft = parseFloat(document.getElementById("height-ft").value) || 0;
-    var inches = parseFloat(document.getElementById("height-in").value) || 0;
-    if (ft === 0 && inches === 0) return null;
-    return feetInchesToCm(ft, inches);
+    var ft =
+      parseFloat(document.getElementById(prefix + "height-ft").value) || 0;
+    var ins =
+      parseFloat(document.getElementById(prefix + "height-in").value) || 0;
+    return ft === 0 && ins === 0 ? null : feetInchesToCm(ft, ins);
   }
   if (unit === "dec_in") {
-    var dec = parseFloat(document.getElementById("height-dec").value);
-    return isNaN(dec) ? null : inchesToCm(dec);
+    var d = parseFloat(document.getElementById(prefix + "height-dec").value);
+    return isNaN(d) ? null : inchesToCm(d);
   }
   if (unit === "cm") {
-    var cm = parseFloat(document.getElementById("height-cm").value);
+    var cm = parseFloat(document.getElementById(prefix + "height-cm").value);
     return isNaN(cm) ? null : cm;
   }
   return null;
 }
 
-function getWeightKg() {
-  var unit = getActiveUnit("weight-toggle");
+function readWeightKg(prefix) {
+  var unit = getActiveUnit(prefix + "weight-toggle");
   if (unit === "lbs_oz") {
-    var lbs = parseFloat(document.getElementById("weight-lbs").value) || 0;
-    var oz = parseFloat(document.getElementById("weight-oz").value) || 0;
-    if (lbs === 0 && oz === 0) return null;
-    return lbsOzToKg(lbs, oz);
+    var lbs =
+      parseFloat(document.getElementById(prefix + "weight-lbs").value) || 0;
+    var oz =
+      parseFloat(document.getElementById(prefix + "weight-oz").value) || 0;
+    return lbs === 0 && oz === 0 ? null : lbsOzToKg(lbs, oz);
   }
   if (unit === "dec_lbs") {
-    var dec = parseFloat(document.getElementById("weight-dec-lbs").value);
-    return isNaN(dec) ? null : decimalLbsToKg(dec);
+    var d = parseFloat(
+      document.getElementById(prefix + "weight-dec-lbs").value,
+    );
+    return isNaN(d) ? null : decimalLbsToKg(d);
   }
   if (unit === "kg") {
-    var kg = parseFloat(document.getElementById("weight-kg").value);
+    var kg = parseFloat(document.getElementById(prefix + "weight-kg").value);
     return isNaN(kg) ? null : kg;
   }
   if (unit === "g") {
-    var g = parseFloat(document.getElementById("weight-g").value);
+    var g = parseFloat(document.getElementById(prefix + "weight-g").value);
     return isNaN(g) ? null : gramsToKg(g);
   }
   return null;
 }
 
-function getHcCm() {
-  var unit = getActiveUnit("hc-toggle");
+function readHcCm(prefix) {
+  var unit = getActiveUnit(prefix + "hc-toggle");
   if (unit === "dec_in") {
-    var inches = parseFloat(document.getElementById("hc-in").value);
-    return isNaN(inches) ? null : inchesToCm(inches);
+    var ins = parseFloat(document.getElementById(prefix + "hc-in").value);
+    return isNaN(ins) ? null : inchesToCm(ins);
   }
   if (unit === "cm") {
-    var cm = parseFloat(document.getElementById("hc-cm").value);
+    var cm = parseFloat(document.getElementById(prefix + "hc-cm").value);
     return isNaN(cm) ? null : cm;
   }
   return null;
 }
 
-// ── 5. VALIDATION ────────────────────────────────────────────────────────
+// Convenience wrappers for main form
+function getHeightCm() {
+  return readHeightCm("");
+}
+function getWeightKg() {
+  return readWeightKg("");
+}
+function getHcCm() {
+  return readHcCm("");
+}
+
+// ── 5. VALIDATION ────────────────────────────────────────────────────────────
 
 function validate(child, date, heightCm, weightKg) {
   var errors = [];
@@ -190,14 +222,15 @@ function validate(child, date, heightCm, weightKg) {
   return errors;
 }
 
-// ── 6. DISPLAYING RESULTS ────────────────────────────────────────────────
+// ── 6. FORMATTING HELPERS ────────────────────────────────────────────────────
 
+// Full format — used in the results box (imperial + metric)
 function formatHeight(cm) {
   if (!cm) return "—";
   var totalInches = cm / 2.54;
   var ft = Math.floor(totalInches / 12);
-  var inches = (totalInches % 12).toFixed(1);
-  return `${ft}′ ${inches}″  (${cm.toFixed(1)} cm)`;
+  var ins = (totalInches % 12).toFixed(1);
+  return `${ft} ft ${ins} in  (${cm.toFixed(1)} cm)`;
 }
 
 function formatWeight(kg) {
@@ -205,18 +238,39 @@ function formatWeight(kg) {
   var totalOz = kg / 0.0283495;
   var lbs = Math.floor(totalOz / 16);
   var oz = (totalOz % 16).toFixed(1);
-  return `${lbs} lb ${oz} oz  (${kg.toFixed(3)} kg)`;
+  return `${lbs} lb ${oz} oz  (${kg.toFixed(1)} kg)`;
 }
 
 function formatHc(cm) {
   if (!cm) return "—";
-  return `${(cm / 2.54).toFixed(1)}″  (${cm.toFixed(1)} cm)`;
+  return `${(cm / 2.54).toFixed(1)} in  (${cm.toFixed(1)} cm)`;
+}
+
+// Short format — used in the history table (imperial only, no metric)
+function formatHeightShort(cm) {
+  if (!cm) return null;
+  var totalInches = cm / 2.54;
+  var ft = Math.floor(totalInches / 12);
+  var ins = (totalInches % 12).toFixed(1);
+  return `${ft} ft ${ins} in`;
+}
+
+function formatWeightShort(kg) {
+  if (!kg) return null;
+  var totalOz = kg / 0.0283495;
+  var lbs = Math.floor(totalOz / 16);
+  var oz = (totalOz % 16).toFixed(1);
+  return `${lbs} lb ${oz} oz`;
+}
+
+function formatHcShort(cm) {
+  if (!cm) return null;
+  return `${(cm / 2.54).toFixed(1)} in`;
 }
 
 function ordinal(n) {
-  console.log("ordinal received:", n, typeof n);
   n = Math.round(n);
-  if (n < 0) return n;
+  if (n < 0) return String(n);
   var mod100 = n % 100;
   var mod10 = n % 10;
   if (mod100 >= 11 && mod100 <= 13) return n + "th";
@@ -231,21 +285,59 @@ function formatPercentile(p) {
   return ordinal(p);
 }
 
+function formatAge(dob, measurementDate) {
+  var dobParts = dob.split("-").map(Number);
+  var dateParts = measurementDate.split("-").map(Number);
+
+  var years = dateParts[0] - dobParts[0];
+  var months = dateParts[1] - dobParts[1];
+  var days = dateParts[2] - dobParts[2];
+
+  if (days < 0) {
+    months -= 1;
+    var borrowYear = dobParts[0] + years;
+    var borrowMonth = dobParts[1] + months;
+    if (borrowMonth <= 0) {
+      borrowMonth += 12;
+      borrowYear -= 1;
+    }
+    var reference = new Date(borrowYear, borrowMonth - 1, dobParts[2]);
+    if (reference.getMonth() !== borrowMonth - 1) {
+      reference = new Date(borrowYear, borrowMonth, 0);
+    }
+    var mDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+    days = Math.round((mDate - reference) / (1000 * 60 * 60 * 24));
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  var parts = [];
+  if (years > 0) parts.push(years + (years === 1 ? " year" : " years"));
+  if (months > 0) parts.push(months + (months === 1 ? " month" : " months"));
+  if (days > 0) parts.push(days + (days === 1 ? " day" : " days"));
+  return parts.length > 0 ? parts.join(" ") : "0 days";
+}
+
+// ── 7. RESULT DISPLAY ────────────────────────────────────────────────────────
+
 function resultRow(label, value, percentile) {
-  var percentileHtml =
+  var pctHtml =
     percentile !== undefined
       ? `<span class="result-percentile">${formatPercentile(percentile)}</span>`
       : "";
   return `
     <div class="result-row">
       <span class="result-label">${label}</span>
-      <span class="result-value">${value} ${percentileHtml}</span>
+      <span class="result-value">${value} ${pctHtml}</span>
     </div>`;
 }
 
 function showError(messageHtml) {
   var result = document.getElementById("result");
   result.className = "result error-box";
+  result.classList.remove("hidden");
   result.innerHTML =
     "<div class='result-title'>⚠️ Please fix the following:</div>" +
     messageHtml;
@@ -258,15 +350,46 @@ function showLoading() {
   result.innerHTML = "<div class='result-title'>Calculating…</div>";
 }
 
+function showResults(data) {
+  lastResult = data;
+  setFormState("calculated");
+
+  var result = document.getElementById("result");
+  result.className = "result success";
+  result.classList.remove("hidden");
+
+  var dob = childrenData[data.child] ? childrenData[data.child].dob : null;
+  var ageDisplay = dob
+    ? formatAge(dob, data.date)
+    : `${data.age_months} months`;
+
+  result.innerHTML =
+    `<div class="result-title">Results for ${data.child}</div>` +
+    resultRow("Date", data.date) +
+    resultRow("Age", ageDisplay) +
+    resultRow("Height", formatHeight(data.height_cm), data.percentiles.height) +
+    resultRow("Weight", formatWeight(data.weight_kg), data.percentiles.weight) +
+    resultRow(
+      "Head circumference",
+      formatHc(data.hc_cm),
+      data.percentiles.head_circumference,
+    ) +
+    resultRow(
+      "BMI",
+      data.bmi ? data.bmi.toFixed(1) : "—",
+      data.percentiles.bmi,
+    );
+
+  showCharts(data.child, data.height_cm, data.weight_kg, data.hc_cm);
+}
+
 function showCharts(child, heightCm, weightKg, hcCm) {
-  // Remove any existing charts
   var existing = document.getElementById("charts-section");
   if (existing) existing.remove();
 
   var section = document.createElement("div");
   section.id = "charts-section";
 
-  // Decide which charts to show based on what was submitted
   var charts = [];
   if (heightCm) charts.push({ type: "height", label: "Height-for-Age" });
   if (weightKg) charts.push({ type: "weight", label: "Weight-for-Age" });
@@ -287,7 +410,6 @@ function showCharts(child, heightCm, weightKg, hcCm) {
     label.className = "chart-label";
     label.textContent = chart.label;
 
-    // The src points directly to the Flask chart endpoint
     var img = document.createElement("img");
     img.className = "chart-img";
     img.alt = chart.label;
@@ -303,98 +425,152 @@ function showCharts(child, heightCm, weightKg, hcCm) {
     section.appendChild(wrapper);
   });
 
-  // Insert charts after the card
-  var card = document.querySelector(".card");
-  card.insertAdjacentElement("afterend", section);
+  document.querySelector(".card").insertAdjacentElement("afterend", section);
 }
 
-function showResults(data) {
-  // Store for the save button to use
-  lastResult = data;
-
-  var result = document.getElementById("result");
-  result.className = "result success";
-
-  var dob = childrenData[data.child] ? childrenData[data.child].dob : null;
-  var ageDisplay = dob
-    ? formatAge(dob, data.date)
-    : `${data.age_months} months`;
-
-  result.innerHTML =
-    `<div class="result-title">✓ Results for ${data.child}</div>` +
-    resultRow("Date", data.date) +
-    resultRow("Age", ageDisplay) +
-    resultRow("Height", formatHeight(data.height_cm), data.percentiles.height) +
-    resultRow("Weight", formatWeight(data.weight_kg), data.percentiles.weight) +
-    resultRow(
-      "Head circumference",
-      formatHc(data.hc_cm),
-      data.percentiles.head_circumference,
-    ) +
-    resultRow(
-      "BMI",
-      data.bmi ? data.bmi.toFixed(1) : "—",
-      data.percentiles.bmi,
-    );
-
-  // Show the save button
-  document.getElementById("save-wrap").classList.remove("hidden");
-
-  // Show charts below the results
-  showCharts(data.child, data.height_cm, data.weight_kg, data.hc_cm);
-}
-
-// ── 8. HISTORY TABLE ─────────────────────────────────────────────────────────
+// ── 8. FORM STATE MACHINE ────────────────────────────────────────────────────
 //
-// Loads and renders the full measurement history for a child.
-// Called automatically when a child is selected in the dropdown.
+// The single submit button changes label and behavior based on formState:
+//   idle        → label "Calculate",        click runs /calculate
+//   calculated  → label "Save Measurement", click runs /measurements POST
 
-function formatAge(dob, measurementDate) {
-  // dob and measurementDate are strings in "YYYY-MM-DD" format
-  // We split manually to avoid timezone issues with new Date()
-  var dobParts = dob.split("-").map(Number);
-  var dateParts = measurementDate.split("-").map(Number);
-
-  var years = dateParts[0] - dobParts[0];
-  var months = dateParts[1] - dobParts[1];
-  var days = dateParts[2] - dobParts[2];
-
-  // Borrow from months if days is negative
-  if (days < 0) {
-    months -= 1;
-    var borrowYear = dobParts[0] + years;
-    var borrowMonth = dobParts[1] + months;
-    if (borrowMonth <= 0) {
-      borrowMonth += 12;
-      borrowYear -= 1;
-    }
-    // Find how many days are in the borrow month to get the reference point
-    var reference = new Date(borrowYear, borrowMonth - 1, dobParts[2]);
-    // If the day doesn't exist in that month, Date() rolls over automatically -
-    // walk back to the last valid day instead
-    if (reference.getMonth() !== borrowMonth - 1) {
-      reference = new Date(borrowYear, borrowMonth, 0); // last day of borrowMonth
-    }
-    var mDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-    days = Math.round((mDate - reference) / (1000 * 60 * 60 * 24));
+function setFormState(state) {
+  formState = state;
+  var btn = document.getElementById("submit-btn");
+  if (state === "idle") {
+    btn.textContent = "Calculate";
+    btn.disabled = false;
+  } else if (state === "calculated") {
+    btn.textContent = "Save Measurement";
+    btn.disabled = false;
+  } else if (state === "saving") {
+    btn.textContent = "Saving…";
+    btn.disabled = true;
+  } else if (state === "saved") {
+    btn.textContent = "✓ Saved";
+    btn.disabled = true;
   }
-
-  // Borrow from years if months is negative
-  if (months < 0) {
-    years -= 1;
-    months += 12;
-  }
-
-  var parts = [];
-  if (years > 0) parts.push(years + (years === 1 ? " year" : " years"));
-  if (months > 0) parts.push(months + (months === 1 ? " month" : " months"));
-  if (days > 0) parts.push(days + (days === 1 ? " day" : " days"));
-
-  return parts.length > 0 ? parts.join(" ") : "0 days";
 }
+
+// Reset the main form back to a clean idle state
+function resetForm() {
+  document.getElementById("measure-date").value = "";
+  document.getElementById("height-ft").value = "";
+  document.getElementById("height-in").value = "";
+  document.getElementById("height-dec").value = "";
+  document.getElementById("height-cm").value = "";
+  document.getElementById("weight-lbs").value = "";
+  document.getElementById("weight-oz").value = "";
+  document.getElementById("weight-dec-lbs").value = "";
+  document.getElementById("weight-kg").value = "";
+  document.getElementById("weight-g").value = "";
+  document.getElementById("hc-in").value = "";
+  document.getElementById("hc-cm").value = "";
+  document.getElementById("result").classList.add("hidden");
+  var existing = document.getElementById("charts-section");
+  if (existing) existing.remove();
+  lastResult = null;
+  setFormState("idle");
+}
+
+// Reset form state when child selection changes
+document.getElementById("child-select").addEventListener("change", function () {
+  resetForm();
+  if (this.value) loadHistory(this.value);
+});
+
+// ── 9. SUBMIT HANDLER ────────────────────────────────────────────────────────
+
+document
+  .getElementById("submit-btn")
+  .addEventListener("click", async function () {
+    var child = document.getElementById("child-select").value;
+    var date = document.getElementById("measure-date").value;
+    var heightCm = getHeightCm();
+    var weightKg = getWeightKg();
+    var hcCm = getHcCm();
+
+    // ── "Save Measurement" state: persist the last calculated result ──────────
+    if (formState === "calculated" && lastResult) {
+      setFormState("saving");
+      try {
+        var saveResp = await fetch("/measurements", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            child: lastResult.child,
+            date: lastResult.date,
+            height_cm: lastResult.height_cm
+              ? round1(lastResult.height_cm)
+              : null,
+            weight_kg: lastResult.weight_kg
+              ? round1(lastResult.weight_kg)
+              : null,
+            hc_cm: lastResult.hc_cm ? round1(lastResult.hc_cm) : null,
+          }),
+        });
+        var saveData = await saveResp.json();
+        if (!saveResp.ok) {
+          setFormState("calculated");
+          showError("<div>" + (saveData.error || "Could not save.") + "</div>");
+          return;
+        }
+        setFormState("saved");
+        loadHistory(lastResult.child);
+      } catch (err) {
+        setFormState("calculated");
+        showError("<div>Could not reach the server.</div>");
+        console.error(err);
+      }
+      return;
+    }
+
+    // ── "Calculate" state: run /calculate ────────────────────────────────────
+    var errors = validate(child, date, heightCm, weightKg);
+    if (errors.length > 0) {
+      showError(
+        errors
+          .map(function (e) {
+            return "<div>• " + e + "</div>";
+          })
+          .join(""),
+      );
+      return;
+    }
+
+    showLoading();
+
+    try {
+      var response = await fetch("/calculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          child: child,
+          date: date,
+          height_cm: heightCm ? round1(heightCm) : null,
+          weight_kg: weightKg ? round1(weightKg) : null,
+          hc_cm: hcCm ? round1(hcCm) : null,
+        }),
+      });
+
+      if (!response.ok) {
+        var err = await response.json();
+        showError("<div>" + (err.error || "Something went wrong.") + "</div>");
+        return;
+      }
+
+      var data = await response.json();
+      showResults(data);
+    } catch (err) {
+      showError("<div>Could not reach the server. Is Flask running?</div>");
+      console.error(err);
+    }
+  });
+
+// ── 10. HISTORY TABLE ────────────────────────────────────────────────────────
 
 function historyCell(primary, secondary, percentile) {
-  if (primary === null || primary === undefined) return "<td>-</td>";
+  if (primary === null || primary === undefined) return "<td>—</td>";
   var html = `<td><div class="td-primary">${primary}</div>`;
   if (secondary) html += `<div class="td-secondary">${secondary}</div>`;
   if (percentile !== null && percentile !== undefined) {
@@ -411,7 +587,6 @@ async function loadHistory(childName) {
   var tableWrap = document.getElementById("history-table-wrap");
   var tbody = document.getElementById("history-body");
 
-  // Show the section and reset state
   section.classList.remove("hidden");
   loading.classList.remove("hidden");
   tableWrap.classList.add("hidden");
@@ -421,19 +596,17 @@ async function loadHistory(childName) {
   try {
     var response = await fetch(`/history/${encodeURIComponent(childName)}`);
     var data = await response.json();
+    var dob = childrenData[childName] ? childrenData[childName].dob : null;
 
     data.measurements.forEach(function (m) {
-      var ageYears = Math.floor(m.age_months / 12);
-      var ageMonths = Math.round(m.age_months % 12);
-      var dob = childrenData[childName] ? childrenData[childName].dob : null;
       var ageDisplay = dob ? formatAge(dob, m.date) : `${m.age_months} months`;
-
-      var heightPrimary = m.height_cm ? formatHeight(m.height_cm) : null;
-      var weightPrimary = m.weight_kg ? formatWeight(m.weight_kg) : null;
-      var hcPrimary = m.hc_cm ? formatHc(m.hc_cm) : null;
+      // Use short (imperial only) format in the table to keep columns narrow
+      var heightPrimary = formatHeightShort(m.height_cm);
+      var weightPrimary = formatWeightShort(m.weight_kg);
+      var hcPrimary = formatHcShort(m.hc_cm);
       var bmiPrimary = m.bmi ? m.bmi.toFixed(1) : null;
 
-      var row = `<tr>
+      tbody.innerHTML += `<tr>
         <td><div class="td-primary">${m.date}</div></td>
         <td><div class="td-primary">${ageDisplay}</div></td>
         ${historyCell(heightPrimary, null, m.percentiles.height)}
@@ -442,16 +615,14 @@ async function loadHistory(childName) {
         ${historyCell(bmiPrimary, null, m.percentiles.bmi)}
         <td><button class="btn-edit" data-date="${m.date}" data-child="${childName}">Edit</button></td>
       </tr>`;
-
-      tbody.innerHTML += row;
     });
 
     loading.classList.add("hidden");
     tableWrap.classList.remove("hidden");
-    // Attach edit button handlers after table is built
+
     document.querySelectorAll(".btn-edit").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        populateFormForEdit(btn.dataset.child, btn.dataset.date);
+        openEditModal(btn.dataset.child, btn.dataset.date);
       });
     });
   } catch (err) {
@@ -460,22 +631,36 @@ async function loadHistory(childName) {
   }
 }
 
-// Load history whenever a child is selected in the dropdown
-document.getElementById("child-select").addEventListener("change", function () {
-  if (this.value) {
-    loadHistory(this.value);
-  }
-});
+// ── 11. EDIT MODAL ───────────────────────────────────────────────────────────
 
-// ── 9. EDIT MODE ──────────────────────────────────────────────────────────────
-//
-// Pre-populates the form with an existing measurement's values
-// and switches the submit button into "update" mode.
+function openModal() {
+  document.getElementById("modal-overlay").classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
 
-var editingDate = null; // tracks which date we're editing, or null if adding new
+function closeModal() {
+  document.getElementById("modal-overlay").classList.add("hidden");
+  document.getElementById("modal-error").classList.add("hidden");
+  document.body.style.overflow = "";
+  var saveBtn = document.getElementById("modal-save");
+  saveBtn.textContent = "Update Measurement";
+  saveBtn.disabled = false;
+}
 
-function populateFormForEdit(childName, date) {
-  // Fetch the measurement from the history endpoint
+// Close on overlay click or close/cancel buttons
+document
+  .getElementById("modal-overlay")
+  .addEventListener("click", function (e) {
+    if (e.target === this) closeModal();
+  });
+document.getElementById("modal-close").addEventListener("click", closeModal);
+document.getElementById("modal-cancel").addEventListener("click", closeModal);
+
+// Store which child/date is being edited
+var modalChild = null;
+var modalDate = null;
+
+function openEditModal(childName, date) {
   fetch(`/history/${encodeURIComponent(childName)}`)
     .then(function (r) {
       return r.json();
@@ -486,178 +671,131 @@ function populateFormForEdit(childName, date) {
       });
       if (!m) return;
 
-      // Set the child and date
-      document.getElementById("child-select").value = childName;
-      document.getElementById("measure-date").value = date;
+      modalChild = childName;
+      modalDate = date;
 
-      // Pre-populate height in cm
+      // Fill in meta info
+      var dob = childrenData[childName] ? childrenData[childName].dob : null;
+      document.getElementById("modal-child-name").textContent = childName;
+      document.getElementById("modal-date").textContent = date;
+      document.getElementById("modal-age").textContent = dob
+        ? formatAge(dob, date)
+        : "";
+
+      // Clear all modal inputs first
+      [
+        "modal-height-ft",
+        "modal-height-in",
+        "modal-height-dec",
+        "modal-height-cm",
+        "modal-weight-lbs",
+        "modal-weight-oz",
+        "modal-weight-dec-lbs",
+        "modal-weight-kg",
+        "modal-weight-g",
+        "modal-hc-in",
+        "modal-hc-cm",
+      ].forEach(function (id) {
+        document.getElementById(id).value = "";
+      });
+
+      // Pre-fill height in cm
       if (m.height_cm) {
-        // Switch to cm toggle
         document
-          .querySelector("#height-toggle .unit-btn[data-unit='cm']")
+          .querySelector("#modal-height-toggle .unit-btn[data-unit='cm']")
           .click();
-        document.getElementById("height-cm").value = m.height_cm;
+        document.getElementById("modal-height-cm").value = m.height_cm;
+      } else {
+        document
+          .querySelector("#modal-height-toggle .unit-btn[data-unit='ft_in']")
+          .click();
       }
 
-      // Pre-populate weight in kg
+      // Pre-fill weight in kg
       if (m.weight_kg) {
         document
-          .querySelector("#weight-toggle .unit-btn[data-unit='kg']")
+          .querySelector("#modal-weight-toggle .unit-btn[data-unit='kg']")
           .click();
-        document.getElementById("weight-kg").value = m.weight_kg;
+        document.getElementById("modal-weight-kg").value = m.weight_kg;
+      } else {
+        document
+          .querySelector("#modal-weight-toggle .unit-btn[data-unit='lbs_oz']")
+          .click();
       }
 
-      // Pre-populate head circumference in cm
+      // Pre-fill HC in cm
       if (m.hc_cm) {
-        document.querySelector("#hc-toggle .unit-btn[data-unit='cm']").click();
-        document.getElementById("hc-cm").value = m.hc_cm;
+        document
+          .querySelector("#modal-hc-toggle .unit-btn[data-unit='cm']")
+          .click();
+        document.getElementById("modal-hc-cm").value = m.hc_cm;
+      } else {
+        document
+          .querySelector("#modal-hc-toggle .unit-btn[data-unit='dec_in']")
+          .click();
       }
 
-      // Switch to edit mode
-      editingDate = date;
-      var submitBtn = document.getElementById("submit-btn");
-      submitBtn.textContent = "Update Measurement";
-
-      // Scroll up to the form
-      document
-        .querySelector(".form-header")
-        .scrollIntoView({ behavior: "smooth" });
+      openModal();
     });
 }
 
-// ── 7. SUBMIT HANDLER ────────────────────────────────────────────────────
-//
-// async so it can use await for the fetch call.
-// All display functions are defined above, so they're available here.
-
 document
-  .getElementById("submit-btn")
+  .getElementById("modal-save")
   .addEventListener("click", async function () {
-    var child = document.getElementById("child-select").value;
-    var date = document.getElementById("measure-date").value;
-    var heightCm = getHeightCm();
-    var weightKg = getWeightKg();
-    var hcCm = getHcCm();
+    var heightCm = readHeightCm("modal-");
+    var weightKg = readWeightKg("modal-");
+    var hcCm = readHcCm("modal-");
+    var modalError = document.getElementById("modal-error");
 
-    var errors = validate(child, date, heightCm, weightKg);
+    modalError.classList.add("hidden");
 
-    var result = document.getElementById("result");
-    result.classList.remove("hidden");
-
-    if (errors.length > 0) {
-      var errorList = errors
-        .map(function (e) {
-          return "<div>• " + e + "</div>";
-        })
-        .join("");
-      showError(errorList);
+    if (heightCm === null && weightKg === null) {
+      modalError.className = "result error-box";
+      modalError.classList.remove("hidden");
+      modalError.innerHTML =
+        "<div>Please enter at least a height or weight.</div>";
       return;
     }
 
-    showLoading();
+    var saveBtn = document.getElementById("modal-save");
+    saveBtn.textContent = "Saving…";
+    saveBtn.disabled = true;
 
     try {
-      var url = editingDate
-        ? `/measurements/${encodeURIComponent(child)}/${editingDate}`
-        : "/calculate";
-      var method = editingDate ? "PUT" : "POST";
-      var payload = {
-        height_cm: heightCm ? Math.round(heightCm * 10) / 10 : null,
-        weight_kg: weightKg ? Math.round(weightKg * 10) / 10 : null,
-        hc_cm: hcCm ? Math.round(hcCm * 10) / 10 : null,
-      };
-      if (!editingDate) {
-        payload.child = child;
-        payload.date = date;
-      }
-
-      var response = await fetch("/calculate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          child: child,
-          date: date,
-          height_cm: heightCm ? Math.round(heightCm * 10) / 10 : null, // 1 decimal
-          weight_kg: weightKg ? Math.round(weightKg * 10) / 10 : null, // 1 decimal
-          hc_cm: hcCm ? Math.round(hcCm * 10) / 10 : null, // 1 decimal
-        }),
-      });
-
-      if (!response.ok) {
-        var err = await response.json();
-        showError("<div>" + (err.error || "Something went wrong.") + "</div>");
-        return;
-      }
-
-      if (editingDate) {
-        // Update succeeded - reset edit mode and refresh history
-        editingDate = null;
-        document.getElementById("submit-btn").textContent = "Save Measurement";
-        document.getElementById("save-wrap").classList.add("hidden");
-        document.getElementById("result").classList.add("hidden");
-        loadHistory(child);
-      } else {
-        var data = await response.json();
-        showResults(data);
-      }
-    } catch (err) {
-      showError("<div>Could not reach the server. Is Flask running?</div>");
-      console.error(err);
-    }
-  });
-
-// ── 9. SAVE HANDLER ──────────────────────────────────────────────────────────
-
-document
-  .getElementById("save-btn")
-  .addEventListener("click", async function () {
-    if (!lastResult) return;
-
-    var btn = document.getElementById("save-btn");
-    btn.textContent = "Saving…";
-    btn.disabled = true;
-
-    try {
-      var response = await fetch("/measurements", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          child: lastResult.child,
-          date: lastResult.date,
-          height_cm: lastResult.height_cm
-            ? Math.round(lastResult.height_cm * 10) / 10
-            : null,
-          weight_kg: lastResult.weight_kg
-            ? Math.round(lastResult.weight_kg * 10) / 10
-            : null,
-          hc_cm: lastResult.hc_cm
-            ? Math.round(lastResult.hc_cm * 10) / 10
-            : null,
-        }),
-      });
+      var response = await fetch(
+        `/measurements/${encodeURIComponent(modalChild)}/${modalDate}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            height_cm: heightCm ? round1(heightCm) : null,
+            weight_kg: weightKg ? round1(weightKg) : null,
+            hc_cm: hcCm ? round1(hcCm) : null,
+          }),
+        },
+      );
 
       var data = await response.json();
 
       if (!response.ok) {
-        btn.textContent = "Save Measurement";
-        btn.disabled = false;
-        // Show the error in the result box
-        var result = document.getElementById("result");
-        result.className = "result error-box";
-        result.innerHTML = `<div class="result-title">⚠️ Could not save</div><div>${data.error}</div>`;
+        saveBtn.textContent = "Update Measurement";
+        saveBtn.disabled = false;
+        modalError.className = "result error-box";
+        modalError.classList.remove("hidden");
+        modalError.innerHTML =
+          "<div>" + (data.error || "Could not save.") + "</div>";
         return;
       }
 
-      // Success — update the button and refresh the history table
-      btn.textContent = "✓ Saved";
-      btn.disabled = true;
-      lastResult = null;
-
-      // Refresh the history table to show the new measurement
-      loadHistory(document.getElementById("child-select").value);
+      // Success — brief confirmation then close and refresh
+      saveBtn.textContent = "✓ Updated";
+      setTimeout(function () {
+        closeModal();
+        loadHistory(modalChild);
+      }, 600);
     } catch (err) {
-      btn.textContent = "Save Measurement";
-      btn.disabled = false;
+      saveBtn.textContent = "Update Measurement";
+      saveBtn.disabled = false;
       console.error(err);
     }
   });

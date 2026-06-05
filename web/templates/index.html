@@ -30,30 +30,26 @@
           <!-- Child & Date -->
           <div class="field-group">
             <h2 class="group-label">Who &amp; When</h2>
-
             <div class="field">
               <label for="child-select">Child</label>
               <select id="child-select">
                 <option value="" disabled selected>Select a child...</option>
               </select>
             </div>
-
             <div class="field">
               <label for="measure-date">Date</label>
               <input type="date" id="measure-date" />
             </div>
           </div>
+
           <!-- Height -->
           <div class="field-group">
             <h2 class="group-label">Height</h2>
-
             <div class="unit-toggle" id="height-toggle">
               <button class="unit-btn active" data-unit="ft_in">ft / in</button>
               <button class="unit-btn" data-unit="dec_in">decimal in</button>
               <button class="unit-btn" data-unit="cm">cm</button>
             </div>
-
-            <!-- ft + in -->
             <div class="field-row" id="height-ft-in">
               <div class="field">
                 <label for="height-ft">Feet</label>
@@ -77,8 +73,6 @@
                 />
               </div>
             </div>
-
-            <!-- decimal inches -->
             <div class="field hidden" id="height-dec-in">
               <label for="height-dec">Inches</label>
               <input
@@ -90,8 +84,6 @@
                 placeholder="42.5"
               />
             </div>
-
-            <!-- cm -->
             <div class="field hidden" id="height-cm-wrap">
               <label for="height-cm">Centimeters</label>
               <input
@@ -108,7 +100,6 @@
           <!-- Weight -->
           <div class="field-group">
             <h2 class="group-label">Weight</h2>
-
             <div class="unit-toggle" id="weight-toggle">
               <button class="unit-btn active" data-unit="lbs_oz">
                 lb / oz
@@ -117,8 +108,6 @@
               <button class="unit-btn" data-unit="kg">kg</button>
               <button class="unit-btn" data-unit="g">g</button>
             </div>
-
-            <!-- lbs + oz -->
             <div class="field-row" id="weight-lbs-oz">
               <div class="field">
                 <label for="weight-lbs">Pounds</label>
@@ -142,8 +131,6 @@
                 />
               </div>
             </div>
-
-            <!-- decimal lbs -->
             <div class="field hidden" id="weight-dec-lbs-wrap">
               <label for="weight-dec-lbs">Pounds</label>
               <input
@@ -155,8 +142,6 @@
                 placeholder="45.5"
               />
             </div>
-
-            <!-- kg -->
             <div class="field hidden" id="weight-kg-wrap">
               <label for="weight-kg">Kilograms</label>
               <input
@@ -168,8 +153,6 @@
                 placeholder="20.6"
               />
             </div>
-
-            <!-- g -->
             <div class="field hidden" id="weight-g-wrap">
               <label for="weight-g">Grams</label>
               <input
@@ -191,15 +174,12 @@
             <p class="group-note">
               Typically recorded for children under 3 years old.
             </p>
-
             <div class="unit-toggle" id="hc-toggle">
               <button class="unit-btn active" data-unit="dec_in">
                 decimal in
               </button>
               <button class="unit-btn" data-unit="cm">cm</button>
             </div>
-
-            <!-- decimal in -->
             <div class="field" id="hc-dec-in">
               <label for="hc-in">Inches</label>
               <input
@@ -211,8 +191,6 @@
                 placeholder="18.5"
               />
             </div>
-
-            <!-- cm -->
             <div class="field hidden" id="hc-cm-wrap">
               <label for="hc-cm">Centimeters</label>
               <input
@@ -226,24 +204,16 @@
             </div>
           </div>
 
-          <!-- Submit -->
+          <!-- Single action button -->
           <div class="form-actions">
             <button class="btn-primary" id="submit-btn" type="button">
-              Save Measurement
+              Calculate
             </button>
           </div>
 
-          <!-- Result area (hidden until JS populates it) -->
+          <!-- Result area -->
           <div id="result" class="result hidden"></div>
         </div>
-
-        <!-- Save button (hidden until results are shown) -->
-        <div id="save-wrap" class="form-actions hidden">
-          <button class="btn-secondary" id="save-btn" type="button">
-            Save Measurement
-          </button>
-        </div>
-        <!-- .card -->
       </section>
 
       <!-- History section -->
@@ -273,6 +243,196 @@
         </div>
       </section>
     </main>
+
+    <!-- Edit Modal -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Edit Measurement</h2>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Read-only info -->
+          <div class="modal-meta">
+            <span id="modal-child-name"></span>
+            <span class="modal-meta-sep">·</span>
+            <span id="modal-date"></span>
+            <span class="modal-meta-sep">·</span>
+            <span id="modal-age"></span>
+          </div>
+
+          <!-- Height -->
+          <div class="modal-field-group">
+            <div class="group-label">Height</div>
+            <div class="unit-toggle" id="modal-height-toggle">
+              <button class="unit-btn active" data-unit="ft_in">ft / in</button>
+              <button class="unit-btn" data-unit="dec_in">decimal in</button>
+              <button class="unit-btn" data-unit="cm">cm</button>
+            </div>
+            <div class="field-row" id="modal-height-ft-in">
+              <div class="field">
+                <label for="modal-height-ft">Feet</label>
+                <input
+                  type="number"
+                  id="modal-height-ft"
+                  min="0"
+                  max="8"
+                  placeholder="3"
+                />
+              </div>
+              <div class="field">
+                <label for="modal-height-in">Inches</label>
+                <input
+                  type="number"
+                  id="modal-height-in"
+                  min="0"
+                  max="11.9"
+                  step="0.1"
+                  placeholder="6.5"
+                />
+              </div>
+            </div>
+            <div class="field hidden" id="modal-height-dec-in">
+              <label for="modal-height-dec">Inches</label>
+              <input
+                type="number"
+                id="modal-height-dec"
+                min="0"
+                max="120"
+                step="0.1"
+                placeholder="42.5"
+              />
+            </div>
+            <div class="field hidden" id="modal-height-cm-wrap">
+              <label for="modal-height-cm">Centimeters</label>
+              <input
+                type="number"
+                id="modal-height-cm"
+                min="0"
+                max="250"
+                step="0.1"
+                placeholder="108.0"
+              />
+            </div>
+          </div>
+
+          <!-- Weight -->
+          <div class="modal-field-group">
+            <div class="group-label">Weight</div>
+            <div class="unit-toggle" id="modal-weight-toggle">
+              <button class="unit-btn active" data-unit="lbs_oz">
+                lb / oz
+              </button>
+              <button class="unit-btn" data-unit="dec_lbs">decimal lb</button>
+              <button class="unit-btn" data-unit="kg">kg</button>
+              <button class="unit-btn" data-unit="g">g</button>
+            </div>
+            <div class="field-row" id="modal-weight-lbs-oz">
+              <div class="field">
+                <label for="modal-weight-lbs">Pounds</label>
+                <input
+                  type="number"
+                  id="modal-weight-lbs"
+                  min="0"
+                  max="400"
+                  placeholder="45"
+                />
+              </div>
+              <div class="field">
+                <label for="modal-weight-oz">Ounces</label>
+                <input
+                  type="number"
+                  id="modal-weight-oz"
+                  min="0"
+                  max="15.9"
+                  step="0.1"
+                  placeholder="8"
+                />
+              </div>
+            </div>
+            <div class="field hidden" id="modal-weight-dec-lbs-wrap">
+              <label for="modal-weight-dec-lbs">Pounds</label>
+              <input
+                type="number"
+                id="modal-weight-dec-lbs"
+                min="0"
+                max="400"
+                step="0.1"
+                placeholder="45.5"
+              />
+            </div>
+            <div class="field hidden" id="modal-weight-kg-wrap">
+              <label for="modal-weight-kg">Kilograms</label>
+              <input
+                type="number"
+                id="modal-weight-kg"
+                min="0"
+                max="200"
+                step="0.1"
+                placeholder="20.6"
+              />
+            </div>
+            <div class="field hidden" id="modal-weight-g-wrap">
+              <label for="modal-weight-g">Grams</label>
+              <input
+                type="number"
+                id="modal-weight-g"
+                min="0"
+                max="200000"
+                step="1"
+                placeholder="20600"
+              />
+            </div>
+          </div>
+
+          <!-- Head Circumference -->
+          <div class="modal-field-group">
+            <div class="group-label">
+              Head Circumference <span class="optional-tag">optional</span>
+            </div>
+            <div class="unit-toggle" id="modal-hc-toggle">
+              <button class="unit-btn active" data-unit="dec_in">
+                decimal in
+              </button>
+              <button class="unit-btn" data-unit="cm">cm</button>
+            </div>
+            <div class="field" id="modal-hc-dec-in">
+              <label for="modal-hc-in">Inches</label>
+              <input
+                type="number"
+                id="modal-hc-in"
+                min="0"
+                max="30"
+                step="0.1"
+                placeholder="18.5"
+              />
+            </div>
+            <div class="field hidden" id="modal-hc-cm-wrap">
+              <label for="modal-hc-cm">Centimeters</label>
+              <input
+                type="number"
+                id="modal-hc-cm"
+                min="0"
+                max="75"
+                step="0.1"
+                placeholder="47.0"
+              />
+            </div>
+          </div>
+
+          <!-- Modal error -->
+          <div id="modal-error" class="result error-box hidden"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secondary" id="modal-cancel">Cancel</button>
+          <button class="btn-primary modal-btn-save" id="modal-save">
+            Update Measurement
+          </button>
+        </div>
+      </div>
+    </div>
 
     <script src="../static/app.js"></script>
   </body>
