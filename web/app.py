@@ -273,6 +273,63 @@ def save_measurement():
         json.dump(all_data, f, indent=2)
 
     return jsonify({"success": True})
+
+
+@app.route("/measurements/<child_name>/<measure_date>", methods=["PUT"])
+def update_measurement(child_name, measure_date):
+    """
+    Update an existing measurement for a child.
+    
+    Expected request JSON:
+        {
+            "height_cm":  118.0,   (optional)
+            "weight_kg":  23.0,    (optional)
+            "hc_cm":      null     (optional)
+        }
+        
+    Response JSON:
+        { "success": true }
+    """
+    data = request.get_json()
+    
+    with open(DATA_FILE) as f:
+        all_data = json.load(f)
+        
+    child = next(
+        (c for c in all_data["children"] if c["name"].lower() == child_name.lower()),
+        None
+    )
+    if child is None:
+        return jsonify({"error": f"Child '{child_name}' not found"}), 404
+    
+    measurement = next(
+        (m for m in child["measurements"] if m["date"] == measure_date),
+        None
+    )
+    
+    if measurement is None:
+        return jsonify({"error": f"No measurement found for {measure_date}"}), 404
+        
+    # Update only the fields that were provided
+    if data.get("height_cm") is not None:
+        measurement["height_cm"] = data["height_cm"]
+    elif "height_cm" in data:
+        measurement.pop("height_cm", None)
+        
+    if data.get("weight_kg") is not None:
+        measurement["weight_kg"] = data["weight_kg"]
+    elif "weight_kg" in data:
+        measurement.pop("weight_kg", None)
+        
+    if data.get("hc_cm") is not None:
+        measurement["head_circumference_cm"] = data["hc_cm"]
+    elif "hc_cm" in data:
+        measurement.pop("head_circumference_cm", None)
+        
+    with open(DATA_FILE, "w") as f:
+        json.dump(all_data, f, indent=2)
+        
+    return jsonify({"success": True})
     
     
 @app.route("/history/<child_name>")

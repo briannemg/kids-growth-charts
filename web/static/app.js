@@ -440,6 +440,7 @@ async function loadHistory(childName) {
         ${historyCell(weightPrimary, null, m.percentiles.weight)}
         ${historyCell(hcPrimary, null, m.percentiles.head_circumference)}
         ${historyCell(bmiPrimary, null, m.percentiles.bmi)}
+        <td><button class="btn-edit" data-date="${m.date}" data-child="${childName}">Edit</button></td>
       </tr>`;
 
       tbody.innerHTML += row;
@@ -447,6 +448,12 @@ async function loadHistory(childName) {
 
     loading.classList.add("hidden");
     tableWrap.classList.remove("hidden");
+    // Attach edit button handlers after table is built
+    document.querySelectorAll(".btn-edit").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        populateFormForEdit(btn.dataset.child, btn.dataset.date);
+      });
+    });
   } catch (err) {
     loading.textContent = "Could not load history.";
     console.error(err);
@@ -459,6 +466,64 @@ document.getElementById("child-select").addEventListener("change", function () {
     loadHistory(this.value);
   }
 });
+
+// ── 9. EDIT MODE ──────────────────────────────────────────────────────────────
+//
+// Pre-populates the form with an existing measurement's values
+// and switches the submit button into "update" mode.
+
+var editingDate = null; // tracks which date we're editing, or null if adding new
+
+function populateFormForEdit(childName, date) {
+  // Fetch the measurement from the history endpoint
+  fetch(`/history/${encodeURIComponent(childName)}`)
+    .then(function (r) {
+      return r.json();
+    })
+    .then(function (data) {
+      var m = data.measurements.find(function (m) {
+        return m.date === date;
+      });
+      if (!m) return;
+
+      // Set the child and date
+      document.getElementById("child-select").value = childName;
+      document.getElementById("measure-date").value = date;
+
+      // Pre-populate height in cm
+      if (m.height_cm) {
+        // Switch to cm toggle
+        document
+          .querySelector("#height-toggle .unit-btn[data-unit='cm']")
+          .click();
+        document.getElementById("height-cm").value = m.height_cm;
+      }
+
+      // Pre-populate weight in kg
+      if (m.weight_kg) {
+        document
+          .querySelector("#weight-toggle .unit-btn[data-unit='kg']")
+          .click();
+        document.getElementById("weight-kg").value = m.weight_kg;
+      }
+
+      // Pre-populate head circumference in cm
+      if (m.hc_cm) {
+        document.querySelector("#hc-toggle .unit-btn[data-unit='cm']").click();
+        document.getElementById("hc-cm").value = m.hc_cm;
+      }
+
+      // Switch to edit mode
+      editingDate = date;
+      var submitBtn = document.getElementById("submit-btn");
+      submitBtn.textContent = "Update Measurement";
+
+      // Scroll up to the form
+      document
+        .querySelector(".form-header")
+        .scrollIntoView({ behavior: "smooth" });
+    });
+}
 
 // ── 7. SUBMIT HANDLER ────────────────────────────────────────────────────
 //
@@ -492,15 +557,29 @@ document
     showLoading();
 
     try {
+      var url = editingDate
+        ? `/measurements/${encodeURIComponent(child)}/${editingDate}`
+        : "/calculate";
+      var method = editingDate ? "PUT" : "POST";
+      var payload = {
+        height_cm: heightCm ? Math.round(heightCm * 10) / 10 : null,
+        weight_kg: weightKg ? Math.round(weightKg * 10) / 10 : null,
+        hc_cm: hcCm ? Math.round(hcCm * 10) / 10 : null,
+      };
+      if (!editingDate) {
+        payload.child = child;
+        payload.date = date;
+      }
+
       var response = await fetch("/calculate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           child: child,
           date: date,
-          height_cm: heightCm,
-          weight_kg: weightKg,
-          hc_cm: hcCm,
+          height_cm: heightCm ? Math.round(heightCm * 10) / 10 : null, // 1 decimal
+          weight_kg: weightKg ? Math.round(weightKg * 10) / 10 : null, // 1 decimal
+          hc_cm: hcCm ? Math.round(hcCm * 10) / 10 : null, // 1 decimal
         }),
       });
 
@@ -510,8 +589,17 @@ document
         return;
       }
 
-      var data = await response.json();
-      showResults(data);
+      if (editingDate) {
+        // Update succeeded - reset edit mode and refresh history
+        editingDate = null;
+        document.getElementById("submit-btn").textContent = "Save Measurement";
+        document.getElementById("save-wrap").classList.add("hidden");
+        document.getElementById("result").classList.add("hidden");
+        loadHistory(child);
+      } else {
+        var data = await response.json();
+        showResults(data);
+      }
     } catch (err) {
       showError("<div>Could not reach the server. Is Flask running?</div>");
       console.error(err);
@@ -536,9 +624,15 @@ document
         body: JSON.stringify({
           child: lastResult.child,
           date: lastResult.date,
-          height_cm: lastResult.height_cm,
-          weight_kg: lastResult.weight_kg,
-          hc_cm: lastResult.hc_cm,
+          height_cm: lastResult.height_cm
+            ? Math.round(lastResult.height_cm * 10) / 10
+            : null,
+          weight_kg: lastResult.weight_kg
+            ? Math.round(lastResult.weight_kg * 10) / 10
+            : null,
+          hc_cm: lastResult.hc_cm
+            ? Math.round(lastResult.hc_cm * 10) / 10
+            : null,
         }),
       });
 
