@@ -274,6 +274,31 @@ select {
   transform: scale(0.98);
 }
 
+.btn-secondary {
+  font-family: "Nunito", "Segoe UI", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lavender-dark);
+  background: var(--lavender-pale);
+  border: 1.5px solid var(--lavender-border);
+  border-radius: var(--radius-btn);
+  padding: 13px 32px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.1s;
+  width: 100%;
+  letter-spacing: 0.01em;
+}
+
+.btn-secondary:hover {
+  background: var(--lavender-border);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
 /* ── Result Box ────────────────────────────────────────────────────── */
 .result {
   margin: 0 28px 24px;

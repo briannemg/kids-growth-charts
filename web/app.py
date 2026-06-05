@@ -213,6 +213,68 @@ def calculate():
     })
     
     
+@app.route("/measurements", methods=["POST"])
+def save_measurement():
+    """
+    Save a new measurement for a child to the JSON data file.
+
+    Expected request JSON:
+        {
+            "child":      "Alex",
+            "date":       "2024-06-01",
+            "height_cm":  118.0,        (optional)
+            "weight_kg":  23.0,         (optional)
+            "hc_cm":      null          (optional)
+        }
+
+    Response JSON:
+        { "success": true }
+    """
+    data = request.get_json()
+
+    child_name = data.get("child")
+    measure_date = data.get("date")
+
+    if not child_name or not measure_date:
+        return jsonify({"error": "child and date are required"}), 400
+
+    # Load the full data file
+    with open(DATA_FILE) as f:
+        all_data = json.load(f)
+
+    # Find the child
+    child = next(
+        (c for c in all_data["children"] if c["name"].lower() == child_name.lower()),
+        None
+    )
+    if child is None:
+        return jsonify({"error": f"Child '{child_name}' not found"}), 404
+
+    # Check for duplicate date
+    existing_dates = [m["date"] for m in child["measurements"]]
+    if measure_date in existing_dates:
+        return jsonify({"error": f"A measurement for {measure_date} already exists"}), 409
+
+    # Build the new measurement — only include fields that were provided
+    new_measurement = {"date": measure_date}
+    if data.get("height_cm") is not None:
+        new_measurement["height_cm"] = data["height_cm"]
+    if data.get("weight_kg") is not None:
+        new_measurement["weight_kg"] = data["weight_kg"]
+    if data.get("hc_cm") is not None:
+        new_measurement["head_circumference_cm"] = data["hc_cm"]
+
+    # Append and sort chronologically
+    child["measurements"].append(new_measurement)
+    child["measurements"].sort(key=lambda m: m["date"])
+
+    # Write back to the file
+    with open(DATA_FILE, "w") as f:
+        json.dump(all_data, f, indent=2)
+
+    return jsonify({"success": True})
+    
+    
 @app.route("/history/<child_name>")
 def history(child_name):
     """

@@ -10,6 +10,7 @@
 
 // Global state
 var childrenData = {};
+var lastResult = null;
 
 // ── 1. UNIT TOGGLES ──────────────────────────────────────────────────────
 
@@ -308,11 +309,12 @@ function showCharts(child, heightCm, weightKg, hcCm) {
 }
 
 function showResults(data) {
+  // Store for the save button to use
+  lastResult = data;
+
   var result = document.getElementById("result");
   result.className = "result success";
 
-  var ageYears = Math.floor(data.age_months / 12);
-  var ageMonths = Math.round(data.age_months % 12);
   var dob = childrenData[data.child] ? childrenData[data.child].dob : null;
   var ageDisplay = dob
     ? formatAge(dob, data.date)
@@ -334,6 +336,9 @@ function showResults(data) {
       data.bmi ? data.bmi.toFixed(1) : "—",
       data.percentiles.bmi,
     );
+
+  // Show the save button
+  document.getElementById("save-wrap").classList.remove("hidden");
 
   // Show charts below the results
   showCharts(data.child, data.height_cm, data.weight_kg, data.hc_cm);
@@ -509,6 +514,56 @@ document
       showResults(data);
     } catch (err) {
       showError("<div>Could not reach the server. Is Flask running?</div>");
+      console.error(err);
+    }
+  });
+
+// ── 9. SAVE HANDLER ──────────────────────────────────────────────────────────
+
+document
+  .getElementById("save-btn")
+  .addEventListener("click", async function () {
+    if (!lastResult) return;
+
+    var btn = document.getElementById("save-btn");
+    btn.textContent = "Saving…";
+    btn.disabled = true;
+
+    try {
+      var response = await fetch("/measurements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          child: lastResult.child,
+          date: lastResult.date,
+          height_cm: lastResult.height_cm,
+          weight_kg: lastResult.weight_kg,
+          hc_cm: lastResult.hc_cm,
+        }),
+      });
+
+      var data = await response.json();
+
+      if (!response.ok) {
+        btn.textContent = "Save Measurement";
+        btn.disabled = false;
+        // Show the error in the result box
+        var result = document.getElementById("result");
+        result.className = "result error-box";
+        result.innerHTML = `<div class="result-title">⚠️ Could not save</div><div>${data.error}</div>`;
+        return;
+      }
+
+      // Success — update the button and refresh the history table
+      btn.textContent = "✓ Saved";
+      btn.disabled = true;
+      lastResult = null;
+
+      // Refresh the history table to show the new measurement
+      loadHistory(document.getElementById("child-select").value);
+    } catch (err) {
+      btn.textContent = "Save Measurement";
+      btn.disabled = false;
       console.error(err);
     }
   });
