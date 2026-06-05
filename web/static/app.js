@@ -613,7 +613,10 @@ async function loadHistory(childName) {
         ${historyCell(weightPrimary, null, m.percentiles.weight)}
         ${historyCell(hcPrimary, null, m.percentiles.head_circumference)}
         ${historyCell(bmiPrimary, null, m.percentiles.bmi)}
-        <td><button class="btn-edit" data-date="${m.date}" data-child="${childName}">Edit</button></td>
+        <td>
+          <button class="btn-edit" data-date="${m.date}" data-child="${childName}">Edit</button>
+          <button class="btn-delete" data-date="${m.date}" data-child="${childName}">Delete</button>
+          </td>
       </tr>`;
     });
 
@@ -623,6 +626,11 @@ async function loadHistory(childName) {
     document.querySelectorAll(".btn-edit").forEach(function (btn) {
       btn.addEventListener("click", function () {
         openEditModal(btn.dataset.child, btn.dataset.date);
+      });
+    });
+    document.querySelectorAll(".btn-delete").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        openDeleteModal(btn.dataset.child, btn.dataset.date);
       });
     });
   } catch (err) {
@@ -796,6 +804,83 @@ document
     } catch (err) {
       saveBtn.textContent = "Update Measurement";
       saveBtn.disabled = false;
+      console.error(err);
+    }
+  });
+
+// ── 12. DELETE MODAL ─────────────────────────────────────────────────────────
+
+var deleteChild = null;
+var deleteDate = null;
+
+function openDeleteModal(childName, date) {
+  deleteChild = childName;
+  deleteDate = date;
+
+  var dob = childrenData[childName] ? childrenData[childName].dob : null;
+  document.getElementById("delete-modal-child-name").textContent = childName;
+  document.getElementById("delete-modal-date").textContent = date;
+  document.getElementById("delete-modal-age").textContent = dob
+    ? formatAge(dob, date)
+    : "";
+
+  // Reset button state
+  var confirmBtn = document.getElementById("delete-modal-confirm");
+  confirmBtn.textContent = "Delete Measurement";
+  confirmBtn.disabled = false;
+
+  document.getElementById("delete-modal-overlay").classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeDeleteModal() {
+  document.getElementById("delete-modal-overlay").classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
+document
+  .getElementById("delete-modal-overlay")
+  .addEventListener("click", function (e) {
+    if (e.target === this) closeDeleteModal();
+  });
+document
+  .getElementById("delete-modal-close")
+  .addEventListener("click", closeDeleteModal);
+document
+  .getElementById("delete-modal-cancel")
+  .addEventListener("click", closeDeleteModal);
+
+document
+  .getElementById("delete-modal-confirm")
+  .addEventListener("click", async function () {
+    var confirmBtn = document.getElementById("delete-modal-confirm");
+    confirmBtn.textContent = "Deleting…";
+    confirmBtn.disabled = true;
+
+    try {
+      var response = await fetch(
+        `/measurements/${encodeURIComponent(deleteChild)}/${deleteDate}`,
+        { method: "DELETE" },
+      );
+
+      var data = await response.json();
+
+      if (!response.ok) {
+        confirmBtn.textContent = "Delete Measurement";
+        confirmBtn.disabled = false;
+        console.error(data.error);
+        return;
+      }
+
+      // Success — close and refresh
+      confirmBtn.textContent = "✓ Deleted";
+      setTimeout(function () {
+        closeDeleteModal();
+        loadHistory(deleteChild);
+      }, 600);
+    } catch (err) {
+      confirmBtn.textContent = "Delete Measurement";
+      confirmBtn.disabled = false;
       console.error(err);
     }
   });

@@ -434,6 +434,39 @@
       </div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal-overlay" class="modal-overlay hidden">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Delete Measurement</h2>
+          <button class="modal-close" id="delete-modal-close">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="modal-meta">
+            <span id="delete-modal-child-name"></span>
+            <span class="modal-meta-sep">·</span>
+            <span id="delete-modal-date"></span>
+            <span class="modal-meta-sep">·</span>
+            <span id="delete-modal-age"></span>
+          </div>
+          <div class="delete-warning">
+            <p>
+              Are you sure you want to delete this measurement? This cannot be
+              undone.
+            </p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secondary" id="delete-modal-cancel">Cancel</button>
+          <button class="btn-danger" id="delete-modal-confirm">
+            Delete Measurement
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script src="../static/app.js"></script>
   </body>
 </html>

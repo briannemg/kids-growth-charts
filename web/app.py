@@ -330,6 +330,38 @@ def update_measurement(child_name, measure_date):
         json.dump(all_data, f, indent=2)
         
     return jsonify({"success": True})
+
+
+@app.route("/measurements/<child_name>/<measure_date>", methods=["DELETE"])
+def delete_measurement(child_name, measure_date):
+    """
+    Delete a measurement for a child.
+
+    Response JSON:
+        { "success": true }
+    """
+    with open(DATA_FILE) as f:
+        all_data = json.load(f)
+
+    child = next(
+        (c for c in all_data["children"] if c["name"].lower() == child_name.lower()),
+        None
+    )
+    if child is None:
+        return jsonify({"error": f"Child '{child_name}' not found"}), 404
+
+    original_count = len(child["measurements"])
+    child["measurements"] = [
+        m for m in child["measurements"] if m["date"] != measure_date
+    ]
+
+    if len(child["measurements"]) == original_count:
+        return jsonify({"error": f"No measurement found for {measure_date}"}), 404
+
+    with open(DATA_FILE, "w") as f:
+        json.dump(all_data, f, indent=2)
+
+    return jsonify({"success": True})
     
     
 @app.route("/history/<child_name>")

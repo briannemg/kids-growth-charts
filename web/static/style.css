@@ -80,7 +80,7 @@ header {
 
 /* ── Main Layout ───────────────────────────────────────────────────── */
 main {
-  max-width: 860px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 40px 24px 80px;
 }
@@ -323,22 +323,6 @@ select {
   font-weight: 600;
 }
 
-/* ── Responsive ────────────────────────────────────────────────────── */
-@media (max-width: 480px) {
-  main {
-    padding: 24px 16px 60px;
-  }
-  .field-group {
-    padding: 20px 20px;
-  }
-  .form-actions {
-    padding: 18px 20px 22px;
-  }
-  .result {
-    margin: 0 20px 22px;
-  }
-}
-
 /* ── Modal ─────────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
@@ -460,6 +444,44 @@ select {
 
 .modal-footer .btn-primary {
   flex: 2;
+}
+
+/* ── Delete modal ──────────────────────────────────────────────────── */
+.delete-warning {
+  padding: 24px;
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  line-height: 1.6;
+}
+
+.btn-danger {
+  font-family: "Nunito", "Segoe UI", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--white);
+  background: linear-gradient(135deg, #e8873a, #c0392b);
+  border: none;
+  border-radius: var(--radius-btn);
+  padding: 13px 32px;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    transform 0.1s;
+  flex: 2;
+  letter-spacing: 0.01em;
+}
+
+.btn-danger:hover {
+  opacity: 0.9;
+}
+.btn-danger:active {
+  transform: scale(0.98);
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* ── Button state: saved ───────────────────────────────────────────── */
@@ -598,6 +620,25 @@ select {
 
 .btn-edit:hover {
   background: var(--lavender-border);
+}
+
+.btn-delete {
+  font-family: "Nunito", "Segoe UI", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--blush-text);
+  background: var(--blush-bg);
+  border: 1.5px solid var(--blush-border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  margin-left: 6px;
+}
+
+.btn-delete:hover {
+  background: var(--blush-border);
 }
 
 /* ── Button secondary ──────────────────────────────────────────────── */
