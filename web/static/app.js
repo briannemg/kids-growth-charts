@@ -8,6 +8,9 @@
 //   - response.json()      (parsing JSON responses)
 //   - populating a <select> dynamically from data
 
+// Global state
+var childrenData = {};
+
 // ── 1. UNIT TOGGLES ──────────────────────────────────────────────────────
 
 function setupUnitToggle(toggleId, panelMap) {
@@ -68,10 +71,10 @@ async function loadChildren() {
   try {
     var response = await fetch("/children");
     var data = await response.json();
-
     var select = document.getElementById("child-select");
 
     data.children.forEach(function (child) {
+      childrenData[child.name] = child; // store the whole object
       var option = document.createElement("option");
       option.value = child.name;
       option.textContent = child.name;
@@ -209,9 +212,22 @@ function formatHc(cm) {
   return `${(cm / 2.54).toFixed(1)}″  (${cm.toFixed(1)} cm)`;
 }
 
+function ordinal(n) {
+  console.log("ordinal received:", n, typeof n);
+  n = Math.round(n);
+  if (n < 0) return n;
+  var mod100 = n % 100;
+  var mod10 = n % 10;
+  if (mod100 >= 11 && mod100 <= 13) return n + "th";
+  if (mod10 === 1) return n + "st";
+  if (mod10 === 2) return n + "nd";
+  if (mod10 === 3) return n + "rd";
+  return n + "th";
+}
+
 function formatPercentile(p) {
   if (p === null || p === undefined) return "—";
-  return `${p}th percentile`;
+  return ordinal(p);
 }
 
 function resultRow(label, value, percentile) {
@@ -297,10 +313,10 @@ function showResults(data) {
 
   var ageYears = Math.floor(data.age_months / 12);
   var ageMonths = Math.round(data.age_months % 12);
-  var ageDisplay =
-    ageYears > 0
-      ? `${ageYears}y ${ageMonths}m (${data.age_months} months)`
-      : `${data.age_months} months`;
+  var dob = childrenData[data.child] ? childrenData[data.child].dob : null;
+  var ageDisplay = dob
+    ? formatAge(dob, data.date)
+    : `${data.age_months} months`;
 
   result.innerHTML =
     `<div class="result-title">✓ Results for ${data.child}</div>` +
@@ -322,6 +338,122 @@ function showResults(data) {
   // Show charts below the results
   showCharts(data.child, data.height_cm, data.weight_kg, data.hc_cm);
 }
+
+// ── 8. HISTORY TABLE ─────────────────────────────────────────────────────────
+//
+// Loads and renders the full measurement history for a child.
+// Called automatically when a child is selected in the dropdown.
+
+function formatAge(dob, measurementDate) {
+  // dob and measurementDate are strings in "YYYY-MM-DD" format
+  // We split manually to avoid timezone issues with new Date()
+  var dobParts = dob.split("-").map(Number);
+  var dateParts = measurementDate.split("-").map(Number);
+
+  var years = dateParts[0] - dobParts[0];
+  var months = dateParts[1] - dobParts[1];
+  var days = dateParts[2] - dobParts[2];
+
+  // Borrow from months if days is negative
+  if (days < 0) {
+    months -= 1;
+    var borrowYear = dobParts[0] + years;
+    var borrowMonth = dobParts[1] + months;
+    if (borrowMonth <= 0) {
+      borrowMonth += 12;
+      borrowYear -= 1;
+    }
+    // Find how many days are in the borrow month to get the reference point
+    var reference = new Date(borrowYear, borrowMonth - 1, dobParts[2]);
+    // If the day doesn't exist in that month, Date() rolls over automatically -
+    // walk back to the last valid day instead
+    if (reference.getMonth() !== borrowMonth - 1) {
+      reference = new Date(borrowYear, borrowMonth, 0); // last day of borrowMonth
+    }
+    var mDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+    days = Math.round((mDate - reference) / (1000 * 60 * 60 * 24));
+  }
+
+  // Borrow from years if months is negative
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  var parts = [];
+  if (years > 0) parts.push(years + (years === 1 ? " year" : " years"));
+  if (months > 0) parts.push(months + (months === 1 ? " month" : " months"));
+  if (days > 0) parts.push(days + (days === 1 ? " day" : " days"));
+
+  return parts.length > 0 ? parts.join(" ") : "0 days";
+}
+
+function historyCell(primary, secondary, percentile) {
+  if (primary === null || primary === undefined) return "<td>-</td>";
+  var html = `<td><div class="td-primary">${primary}</div>`;
+  if (secondary) html += `<div class="td-secondary">${secondary}</div>`;
+  if (percentile !== null && percentile !== undefined) {
+    html += `<div class="td-percentile">${formatPercentile(percentile)}</div>`;
+  }
+  html += "</td>";
+  return html;
+}
+
+async function loadHistory(childName) {
+  var section = document.getElementById("history-section");
+  var subtitle = document.getElementById("history-subtitle");
+  var loading = document.getElementById("history-loading");
+  var tableWrap = document.getElementById("history-table-wrap");
+  var tbody = document.getElementById("history-body");
+
+  // Show the section and reset state
+  section.classList.remove("hidden");
+  loading.classList.remove("hidden");
+  tableWrap.classList.add("hidden");
+  subtitle.textContent = childName;
+  tbody.innerHTML = "";
+
+  try {
+    var response = await fetch(`/history/${encodeURIComponent(childName)}`);
+    var data = await response.json();
+
+    data.measurements.forEach(function (m) {
+      var ageYears = Math.floor(m.age_months / 12);
+      var ageMonths = Math.round(m.age_months % 12);
+      var dob = childrenData[childName] ? childrenData[childName].dob : null;
+      var ageDisplay = dob ? formatAge(dob, m.date) : `${m.age_months} months`;
+
+      var heightPrimary = m.height_cm ? formatHeight(m.height_cm) : null;
+      var weightPrimary = m.weight_kg ? formatWeight(m.weight_kg) : null;
+      var hcPrimary = m.hc_cm ? formatHc(m.hc_cm) : null;
+      var bmiPrimary = m.bmi ? m.bmi.toFixed(1) : null;
+
+      var row = `<tr>
+        <td><div class="td-primary">${m.date}</div></td>
+        <td><div class="td-primary">${ageDisplay}</div></td>
+        ${historyCell(heightPrimary, null, m.percentiles.height)}
+        ${historyCell(weightPrimary, null, m.percentiles.weight)}
+        ${historyCell(hcPrimary, null, m.percentiles.head_circumference)}
+        ${historyCell(bmiPrimary, null, m.percentiles.bmi)}
+      </tr>`;
+
+      tbody.innerHTML += row;
+    });
+
+    loading.classList.add("hidden");
+    tableWrap.classList.remove("hidden");
+  } catch (err) {
+    loading.textContent = "Could not load history.";
+    console.error(err);
+  }
+}
+
+// Load history whenever a child is selected in the dropdown
+document.getElementById("child-select").addEventListener("change", function () {
+  if (this.value) {
+    loadHistory(this.value);
+  }
+});
 
 // ── 7. SUBMIT HANDLER ────────────────────────────────────────────────────
 //

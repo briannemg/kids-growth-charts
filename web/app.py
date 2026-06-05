@@ -212,6 +212,76 @@ def calculate():
         "percentiles": percentiles,
     })
     
+    
+@app.route("/history/<child_name>")
+def history(child_name):
+    """
+    Return all measurements for a child with percentiles calculated for each.
+
+    Response JSON:
+        {
+            "child": "Alex",
+            "sex": "M",
+            "measurements": [
+                {
+                    "date": "2024-03-15",
+                    "age_months": 72.0,
+                    "height_cm": 118.0,
+                    "weight_kg": 23.0,
+                    "hc_cm": null,
+                    "bmi": 16.5,
+                    "percentiles": {
+                        "height": 71.7,
+                        "weight": 77.5,
+                        "head_circumference": null,
+                        "bmi": 77.8
+                    }
+                },
+                ...
+            ]
+        }
+    """
+    child_data = find_child(child_name)
+    if child_data is None:
+        return jsonify({"error": f"Child '{child_name}' not found"}), 404
+
+    sex = child_data["sex"]
+    results = []
+
+    for m in child_data["measurements"]:
+        age_months = age_months_at(child_data["dob"], m["date"])
+        height_cm = m.get("height_cm")
+        weight_kg = m.get("weight_kg")
+        hc_cm = m.get("head_circumference_cm")
+
+        bmi = None
+        if height_cm and weight_kg:
+            bmi = round(weight_kg / ((height_cm / 100) ** 2), 1)
+
+        results.append({
+            "date": m["date"],
+            "age_months": age_months,
+            "height_cm": height_cm,
+            "weight_kg": weight_kg,
+            "hc_cm": hc_cm,
+            "bmi": bmi,
+            "percentiles": {
+                "height": get_percentile(age_months, height_cm, sex, "height", TABLES)
+                          if height_cm else None,
+                "weight": get_percentile(age_months, weight_kg, sex, "weight", TABLES)
+                          if weight_kg else None,
+                "head_circumference": get_percentile(age_months, hc_cm, sex, "head_circumference", TABLES)
+                                      if hc_cm else None,
+                "bmi": get_percentile(age_months, bmi, sex, "bmi", TABLES)
+                       if bmi else None,
+            }
+        })
+
+    # Sort chronologically
+    results.sort(key=lambda x: x["date"])
+
+    return jsonify({"child": child_data["name"], "sex": sex, "measurements": results})
+    
 
 @app.route("/charts/<child_name>/<chart_type>")
 def chart(child_name, chart_type):

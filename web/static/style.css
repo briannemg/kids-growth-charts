@@ -353,6 +353,83 @@ select {
   border: 1px solid var(--lavender-border);
 }
 
+/* ── History Table ─────────────────────────────────────────────────── */
+#history-section {
+  margin-top: 48px;
+}
+
+#history-section .form-header {
+  margin-bottom: 0;
+}
+
+#history-section .form-header h2 {
+  font-family: "Lora", Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+#history-table-wrap {
+  overflow-x: auto;
+}
+
+#history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+#history-table thead {
+  background: var(--lavender-pale);
+}
+
+#history-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lavender);
+  border-bottom: 1px solid var(--lavender-border);
+  white-space: nowrap;
+}
+
+#history-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+#history-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+#history-table tbody tr:hover {
+  background: var(--lavender-input);
+}
+
+.td-primary {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.td-secondary {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+
+.td-percentile {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--lavender-dark);
+  background: var(--lavender-pale);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  display: inline-block;
+  margin-top: 3px;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   main {
