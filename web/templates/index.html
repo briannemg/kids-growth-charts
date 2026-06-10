@@ -347,6 +347,47 @@
           </div>
         </div>
       </section>
+
+      <!-- Add Child section -->
+      <section id="add-child-section">
+        <div class="section-toggle-header">
+          <button class="btn-section-toggle" id="add-child-toggle-btn">
+            Add a Child
+          </button>
+        </div>
+        <div id="add-child-content" class="hidden">
+          <div class="card">
+            <div class="field-group">
+              <div class="group-label">Child Information</div>
+              <div class="field">
+                <label for="new-child-name">Name</label>
+                <input
+                  type="text"
+                  id="new-child-name"
+                  placeholder="e.g. Alex"
+                />
+              </div>
+              <div class="field">
+                <label for="new-child-dob">Date of Birth</label>
+                <input type="date" id="new-child-dob" />
+              </div>
+              <div class="field">
+                <label>Sex</label>
+                <div class="unit-toggle" id="new-child-sex-toggle">
+                  <button class="unit-btn active" data-sex="M">Male</button>
+                  <button class="unit-btn" data-sex="F">Female</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn-primary" id="add-child-btn" type="button">
+                Add Child
+              </button>
+            </div>
+            <div id="add-child-result" class="result hidden"></div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- Edit Modal -->
@@ -567,6 +608,47 @@
           <button class="btn-secondary" id="delete-modal-cancel">Cancel</button>
           <button class="btn-danger" id="delete-modal-confirm">
             Delete Measurement
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Child Modal -->
+    <div id="edit-child-modal-overlay" class="modal-overlay hidden">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Edit Child</h2>
+          <button class="modal-close" id="edit-child-modal-close">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="modal-field-group">
+            <div class="group-label">Child Information</div>
+            <div class="field">
+              <label for="edit-child-name">Name</label>
+              <input type="text" id="edit-child-name" placeholder="e.g. Alex" />
+            </div>
+            <div class="field">
+              <label for="edit-child-dob">Date of Birth</label>
+              <input type="date" id="edit-child-dob" />
+            </div>
+            <div class="field">
+              <label>Sex</label>
+              <div class="unit-toggle" id="edit-child-sex-toggle">
+                <button class="unit-btn active" data-sex="M">Male</button>
+                <button class="unit-btn" data-sex="F">Female</button>
+              </div>
+            </div>
+          </div>
+          <div id="edit-child-error" class="result error-box hidden"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secondary" id="edit-child-modal-cancel">
+            Cancel
+          </button>
+          <button class="btn-primary" id="edit-child-modal-save">
+            Update Child
           </button>
         </div>
       </div>

@@ -599,11 +599,19 @@ async function loadHistory(childName) {
   var loading = document.getElementById("history-loading");
   var tableWrap = document.getElementById("history-table-wrap");
   var tbody = document.getElementById("history-body");
+  var child = childrenData[childName];
+  var sexDisplay = child ? (child.sex === "M" ? "Male" : "Female") : "";
+  var dobDisplay = child ? child.dob : "";
 
   section.classList.remove("hidden");
   loading.classList.remove("hidden");
   tableWrap.classList.add("hidden");
-  subtitle.textContent = childName;
+  subtitle.innerHTML = `${childName} · ${sexDisplay} · ${dobDisplay} <button class="btn-edit" id="edit-child-btn" data-child="${childName}">Edit</button>`;
+  document
+    .getElementById("edit-child-btn")
+    .addEventListener("click", function () {
+      openEditChildModal(this.dataset.child);
+    });
   tbody.innerHTML = "";
 
   try {
@@ -1029,6 +1037,265 @@ document
     } catch (err) {
       btn.textContent = "Save Parent Information";
       btn.disabled = false;
+      console.error(err);
+    }
+  });
+
+// ── 14. ADD CHILD ─────────────────────────────────────────────────────────────
+
+// Toggle section visibility
+document
+  .getElementById("add-child-toggle-btn")
+  .addEventListener("click", function () {
+    var content = document.getElementById("add-child-content");
+    var btn = document.getElementById("add-child-toggle-btn");
+    content.classList.toggle("hidden");
+    btn.classList.toggle("open");
+  });
+
+// Sex toggle — works differently from unit toggles since there are no panels to show/hide
+var selectedSex = "M";
+document
+  .querySelectorAll("#new-child-sex-toggle .unit-btn")
+  .forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document
+        .querySelectorAll("#new-child-sex-toggle .unit-btn")
+        .forEach(function (b) {
+          b.classList.remove("active");
+        });
+      btn.classList.add("active");
+      selectedSex = btn.dataset.sex;
+    });
+  });
+
+document
+  .getElementById("add-child-btn")
+  .addEventListener("click", async function () {
+    var name = document.getElementById("new-child-name").value.trim();
+    var dob = document.getElementById("new-child-dob").value;
+
+    var resultEl = document.getElementById("add-child-result");
+    resultEl.classList.remove("hidden");
+
+    if (!name) {
+      resultEl.className = "result error-box";
+      resultEl.innerHTML =
+        "<div class='result-title'>⚠️ Please enter a name.</div>";
+      return;
+    }
+    if (!dob) {
+      resultEl.className = "result error-box";
+      resultEl.innerHTML =
+        "<div class='result-title'>⚠️ Please enter a date of birth.</div>";
+      return;
+    }
+
+    var btn = document.getElementById("add-child-btn");
+    btn.textContent = "Saving…";
+    btn.disabled = true;
+
+    try {
+      var response = await fetch("/children", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name, sex: selectedSex, dob: dob }),
+      });
+
+      var data = await response.json();
+
+      if (!response.ok) {
+        btn.textContent = "Add Child";
+        btn.disabled = false;
+        resultEl.className = "result error-box";
+        resultEl.innerHTML =
+          "<div class='result-title'>⚠️ " +
+          (data.error || "Could not save.") +
+          "</div>";
+        return;
+      }
+
+      // Success — add to dropdown, clear form, show confirmation
+      var select = document.getElementById("child-select");
+      var option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      select.appendChild(option);
+      childrenData[name] = { name: name, sex: selectedSex, dob: dob };
+
+      // Save added values before resetting
+      var addedName = name;
+      var addedSex = selectedSex;
+      var addedDob = dob;
+
+      document.getElementById("new-child-name").value = "";
+      document.getElementById("new-child-dob").value = "";
+      selectedSex = "M";
+      document
+        .querySelectorAll("#new-child-sex-toggle .unit-btn")
+        .forEach(function (b) {
+          b.classList.remove("active");
+        });
+      document
+        .querySelector("#new-child-sex-toggle .unit-btn[data-sex='M']")
+        .classList.add("active");
+
+      btn.textContent = "✓ Added";
+      resultEl.className = "result success";
+      resultEl.innerHTML = `<div class='result-title'>✓ ${addedName} has been added.</div>
+        <div class='result-row'><span class='result-label'>Date of birth</span><span class='result-value'>${addedDob}</span></div>
+        <div class='result-row'><span class='result-label'>Sex</span><span class='result-value'>${addedSex === "M" ? "Male" : "Female"}</span></div>`;
+
+      setTimeout(function () {
+        btn.textContent = "Add Child";
+        btn.disabled = false;
+      }, 2000);
+    } catch (err) {
+      btn.textContent = "Add Child";
+      btn.disabled = false;
+      console.error(err);
+    }
+  });
+
+// ── 15. EDIT CHILD MODAL ──────────────────────────────────────────────────────
+
+var editChildOriginalName = null;
+var editChildSex = "M";
+
+function openEditChildModal(childName) {
+  var child = childrenData[childName];
+  if (!child) return;
+
+  editChildOriginalName = childName;
+  editChildSex = child.sex;
+
+  document.getElementById("edit-child-name").value = child.name;
+  document.getElementById("edit-child-dob").value = child.dob;
+
+  // Set sex toggle
+  document
+    .querySelectorAll("#edit-child-sex-toggle .unit-btn")
+    .forEach(function (b) {
+      b.classList.remove("active");
+    });
+  document
+    .querySelector(`#edit-child-sex-toggle .unit-btn[data-sex='${child.sex}']`)
+    .classList.add("active");
+
+  document.getElementById("edit-child-error").classList.add("hidden");
+  document
+    .getElementById("edit-child-modal-overlay")
+    .classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeEditChildModal() {
+  document.getElementById("edit-child-modal-overlay").classList.add("hidden");
+  document.body.style.overflow = "";
+  var saveBtn = document.getElementById("edit-child-modal-save");
+  saveBtn.textContent = "Update Child";
+  saveBtn.disabled = false;
+}
+
+document
+  .getElementById("edit-child-modal-overlay")
+  .addEventListener("click", function (e) {
+    if (e.target === this) closeEditChildModal();
+  });
+document
+  .getElementById("edit-child-modal-close")
+  .addEventListener("click", closeEditChildModal);
+document
+  .getElementById("edit-child-modal-cancel")
+  .addEventListener("click", closeEditChildModal);
+
+// Sex toggle for edit modal
+document
+  .querySelectorAll("#edit-child-sex-toggle .unit-btn")
+  .forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document
+        .querySelectorAll("#edit-child-sex-toggle .unit-btn")
+        .forEach(function (b) {
+          b.classList.remove("active");
+        });
+      btn.classList.add("active");
+      editChildSex = btn.dataset.sex;
+    });
+  });
+
+document
+  .getElementById("edit-child-modal-save")
+  .addEventListener("click", async function () {
+    var name = document.getElementById("edit-child-name").value.trim();
+    var dob = document.getElementById("edit-child-dob").value;
+    var errorEl = document.getElementById("edit-child-error");
+
+    errorEl.classList.add("hidden");
+
+    if (!name) {
+      errorEl.className = "result error-box";
+      errorEl.classList.remove("hidden");
+      errorEl.innerHTML = "<div>Please enter a name.</div>";
+      return;
+    }
+    if (!dob) {
+      errorEl.className = "result error-box";
+      errorEl.classList.remove("hidden");
+      errorEl.innerHTML = "<div>Please enter a date of birth.</div>";
+      return;
+    }
+
+    var saveBtn = document.getElementById("edit-child-modal-save");
+    saveBtn.textContent = "Saving…";
+    saveBtn.disabled = true;
+
+    try {
+      var response = await fetch(
+        `/children/${encodeURIComponent(editChildOriginalName)}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name, sex: editChildSex, dob: dob }),
+        },
+      );
+
+      var data = await response.json();
+
+      if (!response.ok) {
+        saveBtn.textContent = "Update Child";
+        saveBtn.disabled = false;
+        errorEl.className = "result error-box";
+        errorEl.classList.remove("hidden");
+        errorEl.innerHTML =
+          "<div>" + (data.error || "Could not save.") + "</div>";
+        return;
+      }
+
+      // Update local childrenData and dropdown
+      var oldName = editChildOriginalName;
+      childrenData[name] = { name: name, sex: editChildSex, dob: dob };
+      if (name !== oldName) {
+        delete childrenData[oldName];
+        // Update the dropdown option
+        var select = document.getElementById("child-select");
+        Array.from(select.options).forEach(function (opt) {
+          if (opt.value === oldName) {
+            opt.value = name;
+            opt.textContent = name;
+          }
+        });
+      }
+
+      saveBtn.textContent = "✓ Updated";
+      setTimeout(function () {
+        closeEditChildModal();
+        // Reload history with potentially new name
+        loadHistory(name);
+      }, 600);
+    } catch (err) {
+      saveBtn.textContent = "Update Child";
+      saveBtn.disabled = false;
       console.error(err);
     }
   });

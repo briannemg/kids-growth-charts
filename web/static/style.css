@@ -706,6 +706,36 @@ select {
   background: var(--lavender-border);
 }
 
+/* ── Add child section ─────────────────────────────────────────────── */
+#add-child-section {
+  margin-top: 24px;
+  margin-bottom: 48px;
+}
+
+input[type="text"] {
+  font-family: "Nunito", "Segoe UI", sans-serif;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--lavender-input);
+  border: 1.5px solid var(--lavender-border);
+  border-radius: var(--radius-input);
+  padding: 9px 13px;
+  width: 100%;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--lavender-focus);
+  box-shadow: 0 0 0 3px var(--lavender-ring);
+  background: var(--white);
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   main {

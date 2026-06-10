@@ -417,6 +417,120 @@ def update_family():
         json.dump(all_data, f, indent=2)
         
     return jsonify({"success": True})
+
+
+@app.route("/children", methods=["POST"])
+def add_child():
+    """
+    Add a new child to the data file.
+    
+    Expected request JSON:
+        {
+            "name": "Sam",
+            "sex":  "M",
+            "dob":  "2020-05-10"
+        }
+        
+    Response JSON:
+        { "success": true }
+    """
+    data = request.get_json()
+    
+    name = data.get("name", "").strip()
+    sex  = data.get("sex", "").strip().upper()
+    dob  = data.get("dob", "").strip()
+    
+    if not name:
+        return jsonify({"error": "Name is required"}), 400
+    if sex not in ("M", "F"):
+        return jsonify({"error": "Sex must be M or F"}), 400
+    if not dob:
+        return jsonify({"error": "Date of birth is required"}), 400
+    
+    # Validate date format
+    try:
+        datetime.strptime(dob, "%Y-%m-%d")
+    except ValueError:
+        return jsonify({"error": "Date of birth must be in YYYY-MM-DD format"}), 400
+    
+    with open(DATA_FILE) as f:
+        all_data = json.load(f)
+        
+    # Check for duplicate name
+    existing_names = [c["name"].lower() for c in all_data["children"]]
+    if name.lower() in existing_names:
+        return jsonify({"error": f"A child names '{name}' already exists"}), 409
+    
+    all_data["children"].append({
+        "name": name,
+        "sex": sex,
+        "dob": dob,
+        "measurements": []
+    })
+    
+    with open(DATA_FILE, "w") as f:
+        json.dump(all_data, f, indent=2)
+        
+    return jsonify({"success": True})
+
+
+@app.route("/children/<child_name>", methods=["PUT"])
+def update_child(child_name):
+    """
+    Update a child's name, sex, or date of birth.
+
+    Expected request JSON:
+        {
+            "name": "Sam",
+            "sex":  "F",
+            "dob":  "2020-05-10"
+        }
+
+    Response JSON:
+        { "success": true }
+    """
+    data = request.get_json()
+
+    name = data.get("name", "").strip()
+    sex  = data.get("sex", "").strip().upper()
+    dob  = data.get("dob", "").strip()
+
+    if not name:
+        return jsonify({"error": "Name is required"}), 400
+    if sex not in ("M", "F"):
+        return jsonify({"error": "Sex must be M or F"}), 400
+    if not dob:
+        return jsonify({"error": "Date of birth is required"}), 400
+
+    try:
+        datetime.strptime(dob, "%Y-%m-%d")
+    except ValueError:
+        return jsonify({"error": "Date of birth must be YYYY-MM-DD"}), 400
+
+    with open(DATA_FILE) as f:
+        all_data = json.load(f)
+
+    child = next(
+        (c for c in all_data["children"] if c["name"].lower() == child_name.lower()),
+        None
+    )
+    if child is None:
+        return jsonify({"error": f"Child '{child_name}' not found"}), 404
+
+    # Check for duplicate name if name is changing
+    if name.lower() != child_name.lower():
+        existing_names = [c["name"].lower() for c in all_data["children"]]
+        if name.lower() in existing_names:
+            return jsonify({"error": f"A child named '{name}' already exists"}), 409
+
+    child["name"] = name
+    child["sex"]  = sex
+    child["dob"]  = dob
+
+    with open(DATA_FILE, "w") as f:
+        json.dump(all_data, f, indent=2)
+
+    return jsonify({"success": True, "name": name})
     
     
 @app.route("/history/<child_name>")
