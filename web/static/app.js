@@ -380,10 +380,11 @@ function showResults(data) {
       data.percentiles.bmi,
     );
 
-  showCharts(data.child, data.height_cm, data.weight_kg, data.hc_cm);
+  // Pass the date so the chart can preview the unsaved measurement
+  showCharts(data.child, data.height_cm, data.weight_kg, data.hc_cm, data.date);
 }
 
-function showCharts(child, heightCm, weightKg, hcCm) {
+function showCharts(child, heightCm, weightKg, hcCm, date) {
   var existing = document.getElementById("charts-section");
   if (existing) existing.remove();
 
@@ -402,6 +403,16 @@ function showCharts(child, heightCm, weightKg, hcCm) {
   if (heightCm)
     charts.push({ type: "projection", label: "Projected Adult Height" });
 
+  // Build query string with measurement values for preview injection
+  // and a cache-busting timestamp so the browser always fetches fresh images
+  var params = new URLSearchParams();
+  if (date) params.set("date", date);
+  if (heightCm) params.set("height_cm", heightCm);
+  if (weightKg) params.set("weight_kg", weightKg);
+  if (hcCm) params.set("hc_cm", hcCm);
+  params.set("t", Date.now());
+  var queryString = params.toString();
+
   charts.forEach(function (chart) {
     var wrapper = document.createElement("div");
     wrapper.className = "chart-wrapper";
@@ -410,13 +421,15 @@ function showCharts(child, heightCm, weightKg, hcCm) {
     label.className = "chart-label";
     label.textContent = chart.label;
 
+    var url = `/charts/${encodeURIComponent(child)}/${chart.type}?${queryString}`;
+
     var img = document.createElement("img");
     img.className = "chart-img";
     img.alt = chart.label;
-    img.src = `/charts/${encodeURIComponent(child)}/${chart.type}`;
+    img.src = url;
 
     var link = document.createElement("a");
-    link.href = `/charts/${encodeURIComponent(child)}/${chart.type}`;
+    link.href = url;
     link.target = "_blank";
     link.appendChild(img);
 
@@ -616,7 +629,7 @@ async function loadHistory(childName) {
         <td>
           <button class="btn-edit" data-date="${m.date}" data-child="${childName}">Edit</button>
           <button class="btn-delete" data-date="${m.date}" data-child="${childName}">Delete</button>
-          </td>
+        </td>
       </tr>`;
     });
 

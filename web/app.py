@@ -352,8 +352,7 @@ def delete_measurement(child_name, measure_date):
 
     original_count = len(child["measurements"])
     child["measurements"] = [
-        m for m in child["measurements"] if m["date"] != measure_date
-    ]
+        m for m in child["measurements"] if m["date"] != measure_date]
 
     if len(child["measurements"]) == original_count:
         return jsonify({"error": f"No measurement found for {measure_date}"}), 404
@@ -456,6 +455,28 @@ def chart(child_name, chart_type):
         return jsonify({"error": f"Child '{child_name}' not found"}), 404
     
     child = build_child_object(child_data)
+    
+    # Inject a preview measurement if query parameters are provided.
+    # This allows the chart to show an unsaved measurement as a preview point.
+    preview_date   = request.args.get("date")
+    preview_height = request.args.get("height_cm", type=float)
+    preview_weight = request.args.get("weight_kg", type=float)
+    preview_hc     = request.args.get("hc_cm", type=float)
+    
+    if preview_date and (preview_height or preview_weight or preview_hc):
+        preview_age = age_months_at(child_data["dob"], preview_date)
+        # Only inject if this date isn't already saved
+        existing_dates = [m.date.strftime("%Y-%m-%d") for m in child.measurements]
+        if preview_date not in existing_dates:
+            preview_measurement = Measurement(
+                date=datetime.strptime(preview_date, "%Y-%m-%d").date(),
+                age_months=preview_age,
+                height_cm=preview_height,
+                weight_kg=preview_weight,
+                head_circumference_cm=preview_hc,
+            )
+            child.measurements.append(preview_measurement)
+            child.measurements.sort(key=lambda m: m.date)
     
     # Load family heights for the projection chart
     with open(DATA_FILE) as f:

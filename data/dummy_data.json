@@ -64,6 +64,16 @@
           "date": "2024-03-15",
           "height_cm": 118.0,
           "weight_kg": 23.0
+        },
+        {
+          "date": "2025-03-15",
+          "height_cm": 123.2,
+          "weight_kg": 23.8
+        },
+        {
+          "date": "2026-06-10",
+          "height_cm": 130.8,
+          "weight_kg": 26
         }
       ]
     },
