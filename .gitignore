@@ -31,6 +31,10 @@ output/
 # Family growth data - real data is private, only dummy data is tracked
 data/my_family.json
 
+# SQLite database (contains private data)
+*.db
+web/growth_charts.db
+
 # VSCode
 .vscode/
 
