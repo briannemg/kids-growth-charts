@@ -361,6 +361,62 @@ def delete_measurement(child_name, measure_date):
         json.dump(all_data, f, indent=2)
 
     return jsonify({"success": True})
+
+
+@app.route("/family", methods=["GET"])
+def get_family():
+    """
+    Return the parental height data.
+
+    Response JSON:
+        {
+            "father_height_cm": 180.3,
+            "mother_height_cm": 165.1
+        }
+    """
+    with open(DATA_FILE) as f:
+        data = json.load(f)
+    family = data.get("family", {})
+    return jsonify({
+        "father_height_cm": family.get("father_height_cm"),
+        "mother_height_cm": family.get("mother_height_cm"),
+    })
+
+
+@app.route("/family", methods=["POST"])
+def update_family():
+    """
+    Update the parental height data.
+    
+    Expected request JSON:
+        {
+            "father_height_cm": 180.3,
+            "mother_height_cm": 165.1
+        }
+        
+    Response JSON:
+        { "success": true }
+    """
+    data = request.get_json()
+    
+    father_cm = data.get("father_height_cm")
+    mother_cm = data.get("mother_height_cm")
+    
+    with open(DATA_FILE) as f:
+        all_data = json.load(f)
+        
+    if "family" not in all_data:
+        all_data["family"] = {}
+        
+    if father_cm is not None:
+        all_data["family"]["father_height_cm"] = round(father_cm, 1)
+    if mother_cm is not None:
+        all_data["family"]["mother_height_cm"] = round(mother_cm, 1)
+        
+    with open(DATA_FILE, "w") as f:
+        json.dump(all_data, f, indent=2)
+        
+    return jsonify({"success": True})
     
     
 @app.route("/history/<child_name>")

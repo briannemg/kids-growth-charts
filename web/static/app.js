@@ -897,3 +897,138 @@ document
       console.error(err);
     }
   });
+
+// ── 13. FAMILY EDITOR ────────────────────────────────────────────────────────
+
+// Toggle family section visibility
+document
+  .getElementById("family-toggle-btn")
+  .addEventListener("click", function () {
+    var content = document.getElementById("family-content");
+    var btn = document.getElementById("family-toggle-btn");
+    content.classList.toggle("hidden");
+    btn.classList.toggle("open");
+  });
+
+setupUnitToggle("father-toggle", {
+  ft_in: "father-ft-in",
+  cm: "father-cm-wrap",
+});
+setupUnitToggle("mother-toggle", {
+  ft_in: "mother-ft-in",
+  cm: "mother-cm-wrap",
+});
+
+function cmToFeetInches(cm) {
+  var totalInches = cm / 2.54;
+  return {
+    ft: Math.floor(totalInches / 12),
+    ins: parseFloat((totalInches % 12).toFixed(1)),
+  };
+}
+
+async function loadFamily() {
+  try {
+    var response = await fetch("/family");
+    var data = await response.json();
+
+    // Pre-populate father - convert cm to ft/in for the default toggle state
+    if (data.father_height_cm) {
+      var f = cmToFeetInches(data.father_height_cm);
+      document.getElementById("father-ft").value = f.ft;
+      document.getElementById("father-in").value = f.ins;
+      document.getElementById("father-cm").value = data.father_height_cm;
+    }
+
+    // Pre-populate mother
+    if (data.mother_height_cm) {
+      var m = cmToFeetInches(data.mother_height_cm);
+      document.getElementById("mother-ft").value = m.ft;
+      document.getElementById("mother-in").value = m.ins;
+      document.getElementById("mother-cm").value = data.mother_height_cm;
+    }
+  } catch (err) {
+    console.error("Could not load family data:", err);
+  }
+}
+
+loadFamily();
+
+document
+  .getElementById("family-save-btn")
+  .addEventListener("click", async function () {
+    // Read father height
+    var fatherCm = null;
+    var fatherUnit = getActiveUnit("father-toggle");
+    if (fatherUnit === "ft_in") {
+      var fFt = parseFloat(document.getElementById("father-ft").value) || 0;
+      var fIns = parseFloat(document.getElementById("father-in").value) || 0;
+      if (fFt > 0 || fIns > 0) fatherCm = round1(feetInchesToCm(fFt, fIns));
+    } else {
+      var fCm = parseFloat(document.getElementById("father-cm").value);
+      if (!isNaN(fCm)) fatherCm = round1(fCm);
+    }
+
+    // Read mother height
+    var motherCm = null;
+    var motherUnit = getActiveUnit("mother-toggle");
+    if (motherUnit === "ft_in") {
+      var mFt = parseFloat(document.getElementById("mother-ft").value) || 0;
+      var mIns = parseFloat(document.getElementById("mother-in").value) || 0;
+      if (mFt > 0 || mIns > 0) motherCm = round1(feetInchesToCm(mFt, mIns));
+    } else {
+      var mCm = parseFloat(document.getElementById("mother-cm").value);
+      if (!isNaN(mCm)) motherCm = round1(mCm);
+    }
+
+    var familyResult = document.getElementById("family-result");
+    familyResult.classList.remove("hidden");
+
+    if (!fatherCm && !motherCm) {
+      familyResult.className = "result error-box";
+      familyResult.innerHTML =
+        "<div class='result-title'>⚠️ Please enter at least one height.</div>";
+      return;
+    }
+
+    var btn = document.getElementById("family-save-btn");
+    btn.textContent = "Saving...";
+    btn.disabled = true;
+
+    try {
+      var response = await fetch("/family", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          father_height_cm: fatherCm,
+          mother_height_cm: motherCm,
+        }),
+      });
+
+      var data = await response.json();
+
+      if (!response.ok) {
+        btn.textContent = "Save Parent Information";
+        btn.disabled = false;
+        familyResult.className = "result error-box";
+        familyResult.innerHTML =
+          "<div>" + (data.error || "Could not save.") + "</div>";
+        return;
+      }
+
+      btn.textContent = "✓ Saved";
+      familyResult.className = "result success";
+      familyResult.innerHTML =
+        "<div class='result-title'>✓ Parent information saved.</div>";
+
+      // Re-enable after a moment
+      setTimeout(function () {
+        btn.textContent = "Save Parent Information";
+        btn.disabled = false;
+      }, 2000);
+    } catch (err) {
+      btn.textContent = "Save Parent Information";
+      btn.disabled = false;
+      console.error(err);
+    }
+  });

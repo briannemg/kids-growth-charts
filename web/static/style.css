@@ -667,6 +667,45 @@ select {
   transform: scale(0.98);
 }
 
+/* ── Family section ────────────────────────────────────────────────── */
+#family-section {
+  margin-top: 48px;
+}
+
+.section-toggle-header {
+  margin-bottom: 16px;
+}
+
+.btn-section-toggle {
+  font-family: "Nunito", "Segoe UI", sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--lavender-dark);
+  background: var(--lavender-pale);
+  border: 1.5px solid var(--lavender-border);
+  border-radius: var(--radius-btn);
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-section-toggle::before {
+  content: "▸";
+  font-size: 0.75rem;
+  transition: transform 0.2s;
+}
+
+.btn-section-toggle.open::before {
+  transform: rotate(90deg);
+}
+
+.btn-section-toggle:hover {
+  background: var(--lavender-border);
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   main {

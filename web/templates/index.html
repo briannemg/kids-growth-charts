@@ -242,6 +242,111 @@
           </div>
         </div>
       </section>
+
+      <!-- Family section -->
+      <section id="family-section">
+        <div class="section-toggle-header">
+          <button class="btn-section-toggle" id="family-toggle-btn">
+            Parent Information
+          </button>
+        </div>
+        <div id="family-content" class="hidden">
+          <div class="card">
+            <div class="field-group">
+              <div class="group-label">Father's Height</div>
+              <div class="unit-toggle" id="father-toggle">
+                <button class="unit-btn active" data-unit="ft_in">
+                  ft / in
+                </button>
+                <button class="unit-btn" data-unit="cm">cm</button>
+              </div>
+              <div class="field-row" id="father-ft-in">
+                <div class="field">
+                  <label for="father-ft">Feet</label>
+                  <input
+                    type="number"
+                    id="father-ft"
+                    min="0"
+                    max="8"
+                    placeholder="5"
+                  />
+                </div>
+                <div class="field">
+                  <label for="father-in">Inches</label>
+                  <input
+                    type="number"
+                    id="father-in"
+                    min="0"
+                    max="11.9"
+                    ste="0.1"
+                    placeholder="11.0"
+                  />
+                </div>
+              </div>
+              <div class="field hidden" id="father-cm-wrap">
+                <label for="father-cm">Centimeters</label>
+                <input
+                  type="number"
+                  id="father-cm"
+                  min="0"
+                  max="250"
+                  step="0.1"
+                  placeholder="180.3"
+                />
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-label">Mother's Height</div>
+              <div class="unit-toggle" id="mother-toggle">
+                <button class="unit-btn active" data-unit="ft_in">
+                  ft / in
+                </button>
+                <button class="unit-btn" data-unit="cm">cm</button>
+              </div>
+              <div class="field-row" id="mother-ft-in">
+                <div class="field">
+                  <label for="mother-ft">Feet</label>
+                  <input
+                    type="number"
+                    id="mother-ft"
+                    min="0"
+                    max="8"
+                    placeholder="5"
+                  />
+                </div>
+                <div class="field">
+                  <label for="mother-in">Inches</label>
+                  <input
+                    type="number"
+                    id="mother-in"
+                    min="0"
+                    max="11.9"
+                    ste="0.1"
+                    placeholder="5.0"
+                  />
+                </div>
+              </div>
+              <div class="field hidden" id="mother-cm-wrap">
+                <label for="mother-cm">Centimeters</label>
+                <input
+                  type="number"
+                  id="mother-cm"
+                  min="0"
+                  max="250"
+                  step="0.1"
+                  placeholder="165.1"
+                />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn-primary" id="family-save-btn" type="button">
+                Save Parent Information
+              </button>
+            </div>
+            <div id="family-result" class="result hidden"></div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- Edit Modal -->
