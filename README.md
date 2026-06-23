@@ -32,8 +32,10 @@ kids-growth-charts/
 web/
     app.py
     database.py
-    templates/
+    migrate.py
+    demo_growth_charts.db
     static/
+    templates/
 
 README.md
 requirements.txt
@@ -82,6 +84,24 @@ http://127.0.0.1:5000
 - Data table rendering
 - Frontend/backend integration
 - Practical data visualization
+
+## Deployment
+
+The Flask web application is configured for deployment with Render.
+
+Production build command:
+
+```bash
+pip install -r requirements-web.txt
+```
+
+Production start command:
+
+```bash
+gunicorn web.app:app
+```
+
+The deployed demo uses a non-private sample SQLite database generated from `data/dummy_data.json`. Personal family data is excluded from version control.
 
 ## Future Improvements
 
