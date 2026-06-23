@@ -28,6 +28,7 @@ data/my_family.json
 
 # SQLite database (contains private data)
 *.db
+!web/demo_growth_charts.db
 web/growth_charts.db
 
 # VSCode
@@ -36,3 +37,8 @@ web/growth_charts.db
 # macOS
 .DS_Store
 Thumbs.db
+
+# Environment variables
+.env
+.env.*
+

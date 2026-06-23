@@ -14,10 +14,16 @@ All measurements are stored in metric (cm, kg).
 
 import sqlite3
 from pathlib import Path
+import shutil
 
-# Database file lives next to app.py in the web/ directory
-DB_PATH = Path(__file__).parent / "growth_charts.db"
+BASE_DIR = Path(__file__).parent
+DB_PATH = BASE_DIR / "growth_charts.db"
+DEMO_DB_PATH = BASE_DIR / "demo_growth_charts.db"
 
+def ensure_demo_database() -> None:
+    """Create the working database from demo data if no database exists."""
+    if not DB_PATH.exists() and DEMO_DB_PATH.exists():
+        shutil.copy(DEMO_DB_PATH, DB_PATH)
 
 def get_db():
     """
@@ -42,6 +48,7 @@ def init_db():
     Create all tables if they don't already exist.
     Safe to call on every startup - won't overwrite existing data.
     """
+    ensure_demo_database()
     with get_db() as db:
         db.executescript("""
             CREATE TABLE IF NOT EXISTS children (
@@ -193,7 +200,7 @@ def get_family():
     """Return the family heights as a dict, or empty dict if not set."""
     with get_db() as db:
         row = db.execute(
-            "SELECT father_height_cm, mother_height_cm FROM family WEHRE id = 1"
+            "SELECT father_height_cm, mother_height_cm FROM family WHERE id = 1"
         ).fetchone()
     return dict(row) if row else {"father_height_cm": None, "mother_height_cm": None}
 

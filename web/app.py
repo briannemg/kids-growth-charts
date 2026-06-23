@@ -44,7 +44,7 @@ from growth_charts.plotting import (  # noqa: E402
     plot_head_circumference_chart,
     plot_projection_over_time,
 )
-from database import (  # noqa: E402
+from web.database import (  # noqa: E402
     init_db,
     get_all_children,
     get_child_by_name,
