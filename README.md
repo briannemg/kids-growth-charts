@@ -4,6 +4,8 @@ A full-stack Flask web application for entering, storing, editing, and visualizi
 
 The application allows users to add growth records through a web form, persist measurements in a SQLite database, view historical entries in a table, update or delete records, and generate growth charts directly in the browser.
 
+**Live Demo:** https://kids-growth-charts.onrender.com/
+
 ## Features
 
 - Add child growth measurements through a web form
@@ -87,7 +89,11 @@ http://127.0.0.1:5000
 
 ## Deployment
 
-The Flask web application is configured for deployment with Render.
+The application is deployed publicly using Render and served with Gunicorn as a production WSGI server.
+
+Live production URL:
+
+https://kids-growth-charts.onrender.com/
 
 Production build command:
 
@@ -105,9 +111,8 @@ The deployed demo uses a non-private sample SQLite database generated from `data
 
 ## Future Improvements
 
-- Deploy the Flask app publicly
-- Add user authentication
-- Support multiple children or profiles
+- Add user authentication for private family accounts
+- Support multiple profiles
 - Add percentile reference curves
 - Improve mobile responsiveness
 - Add export options for historical data
