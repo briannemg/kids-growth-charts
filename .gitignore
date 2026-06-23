@@ -12,11 +12,6 @@ htmlcov/
 # Matplotlib
 .matplotlib/
 
-# Downloaded data files (reproduced by download_data.py)
-growth_charts/data/*.csv
-growth_charts/data/*.xls
-growth_charts/data/*.xlsx
-
 # Downloaded font files (reproduced by scripts/download_fonts.py)
 growth_charts/fonts/*.ttf
 growth_charts/fonts/*.otf
